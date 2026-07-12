@@ -81,6 +81,7 @@ body {
 @keyframes thinkPulse { 0%, 100% { opacity: .45; } 50% { opacity: 1; } }
 #dealer-plaque { border-bottom: 3px solid #0e0b08; }
 #my-plaque { border-top: 3px solid #0e0b08; }
+#my-plaque .who { flex: 0 0 auto; white-space: nowrap; } /* 명줄·엽전은 절대 줄바꿈·압착 금지 */
 .plaque .who { flex: 1; min-width: 0; }
 .plaque .sub { display: block; font-size: 12px; color: #9c8d72; }
 .plaque .name { font-family: var(--serif); font-size: 17px; color: #e8b7a9; display: block; }
@@ -98,9 +99,10 @@ body {
 .purse .unit { font-size: 12px; color: #9c8d72; margin-left: 2px; }
 
 /* 점수 블록 — 딜러·나 대칭 (큰 정산/목표 + 게이지 + 족보·배수, 높이 불변) */
-.score-block { display: flex; flex-direction: column; gap: 3px; min-width: 150px; flex-shrink: 0; }
+.score-block { display: flex; flex-direction: column; gap: 3px; min-width: 150px; flex-shrink: 1; }
 .score-block.right-align { margin-left: auto; align-items: flex-end; }
 .score-block.right-align .calc-line { justify-content: flex-end; }
+.score-block .calc-line, .score-block .score-line { max-width: 100%; } /* 넘치면 칩부터 줄어들게 */
 .score-block .goal-bar { width: 150px; margin: 0; } /* 게이지 길이는 딜러·나 동일 고정 */
 .plaque .who.right-align { text-align: right; }
 .score-line { display: flex; align-items: baseline; gap: 6px; flex-wrap: nowrap; white-space: nowrap; overflow: hidden; }
@@ -117,7 +119,7 @@ body {
 }
 .calc-line > span { flex-shrink: 0; }
 .calc-line b { color: var(--paper); font-weight: 700; }
-.calc-line .chips { flex-wrap: nowrap; overflow: hidden; }
+.calc-line .chips { flex-wrap: nowrap; overflow: hidden; flex-shrink: 1 !important; min-width: 0; justify-content: flex-start; }
 
 /* 딜러 손패 뒷면 (장수 파악용 — 작게) */
 .hand-row { display: flex; align-items: center; gap: 8px; padding: 0 4px; height: 34px; overflow: hidden; }
