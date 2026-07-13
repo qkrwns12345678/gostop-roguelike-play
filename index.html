@@ -4061,7 +4061,11 @@ function animateCardsV3(prevRects, freshMoves, { pendingResolved, floorSnap, cho
   // 임시 자리 — 직전 렌더의 2행 배치(floorSnap) 기준
   //   짝 있음: 그 무더기 위 / 짝 없음: 낸 패(패)=1행 오른끝, 뽑은 패(더미)=2행 오른끝
   const tempSpotFor = (id, isFlip) => {
-    if (chosenRect) return { left: chosenRect.left + 7, top: chosenRect.top + 7 }; // 고른 카드 위로
+    // 고른 카드 위로 — 선택을 유발한 그 카드(낸/뽑은 패)에만 적용.
+    // 이어지는 더미 뒤집기 등 다른 카드는 제 규칙(짝 무더기 / 2행 오른끝)을 따른다.
+    if (chosenRect && pendingResolved && id === pendingResolved.cardId) {
+      return { left: chosenRect.left + 7, top: chosenRect.top + 7 };
+    }
     const month = Number(id.split('-')[0]);
     const pile = floorSnap.find((p) => p.month === month);
     if (pile) {
