@@ -313,6 +313,7 @@ button:focus-visible { outline: 2px solid var(--gwang-gold); outline-offset: 2px
 
 /* 카드 이동 연출 — FLIP (app.js가 transform을 건다) */
 .card.flying { z-index: 40; pointer-events: none; }
+.card.flying.hero-fly { z-index: 46; } /* 낸·뽑은 패는 겹치는 순간 항상 맨 위 */
 .card.flying.from-stock { box-shadow: 0 0 0 2px var(--gwang-gold), 0 8px 18px rgba(0,0,0,.5); }
 .card.flying.from-dealer { box-shadow: 0 0 0 2px #e8b7a9, 0 8px 18px rgba(0,0,0,.5); }
 
@@ -3972,7 +3973,7 @@ function consumeMoves(v) {
 //    동시에 바닥이 빠른 모션(v1 속도)으로 정리된다 — 효과음·진동·하이라이트 없음.
 // 변경분 하이라이트(흰 테두리 번쩍)는 턴이 끝난 뒤 onSettled에서 한 번에.
 const ANIM3 = { FLY: 340, GAP: 130, TIDY: 280 };
-function animateCardsV3(prevRects, freshMoves, { pendingResolved, floorSnap, chosenRect, onSettled }) {
+function animateCardsV3(prevRects, freshMoves, { pendingResolved, floorSnap, chosenRect, onSettled, choosing = false }) {
   const els = [...document.querySelectorAll('#app .card[data-id]')];
   const newRects = new Map();
   for (const el of els) newRects.set(el.dataset.id, el.getBoundingClientRect());
@@ -3980,9 +3981,10 @@ function animateCardsV3(prevRects, freshMoves, { pendingResolved, floorSnap, cho
 
   const playMove = freshMoves.find((m) => m.action === 'play');
   const flipMove = freshMoves.find((m) => m.action === 'flip');
-  // 선택 확정 직후 렌더에는 이동 로그가 없다 — 대기하던 패가 그 단계의 주인공
-  const playId = playMove?.card.id ?? (pendingResolved?.source === 'play' ? pendingResolved.cardId : null);
-  const flipId = flipMove?.card.id ?? (pendingResolved?.source === 'flip' ? pendingResolved.cardId : null);
+  // 선택 단계에서는 낸/뽑은 패가 손·더미에 그대로 남는다 — 바닥으로 날리지 않는다
+  // (겹친 무더기만 벌어진다). 선택이 끝나면 그때 고른 카드 위로 날아간다.
+  const playId = choosing ? null : (playMove?.card.id ?? (pendingResolved?.source === 'play' ? pendingResolved.cardId : null));
+  const flipId = choosing ? null : (flipMove?.card.id ?? (pendingResolved?.source === 'flip' ? pendingResolved.cardId : null));
 
   // 바닥 카드 실측 크기 (손패와 동일 규칙)
   const probe = document.querySelector('#floor .card[data-id], #hand .card[data-id], #stock .card');
@@ -4053,7 +4055,7 @@ function animateCardsV3(prevRects, freshMoves, { pendingResolved, floorSnap, cho
     }, delay);
   };
   const cleanup = (el) => {
-    el.classList.remove('flying');
+    el.classList.remove('flying', 'hero-fly');
     el.style.transition = '';
     el.style.transformOrigin = '';
   };
@@ -4061,6 +4063,7 @@ function animateCardsV3(prevRects, freshMoves, { pendingResolved, floorSnap, cho
   for (const mv of movers) {
     const { el, id, from, to, phase } = mv;
     el.classList.add('flying');
+    if (phase !== 2) el.classList.add('hero-fly'); // 낸/뽑은 패는 겹칠 때 항상 맨 위
     el.style.transformOrigin = 'top left';
     el.style.transition = 'none';
     el.style.transform =
@@ -5095,7 +5098,7 @@ function render() {
   let anim;
   if (ANIM_V === 1) anim = animV1(prevRects, freshMoves);
   else if (ANIM_V === 2) anim = animV2(prevRects, freshMoves);
-  else anim = animateCardsV3(prevRects, freshMoves, { pendingResolved, floorSnap: prevFloorSnap, chosenRect, onSettled: applyHighlights });
+  else anim = animateCardsV3(prevRects, freshMoves, { pendingResolved, floorSnap: prevFloorSnap, chosenRect, onSettled: applyHighlights, choosing: v.phase === 'choose' });
   if (ANIM_V !== 3) applyHighlights(); // 구버전은 기존대로 즉시 표시
   lastRects = anim.newRects;
   prevFloorSnap = newFloorSnap;
