@@ -4059,7 +4059,7 @@ function animateCardsV3(prevRects, freshMoves, { pendingResolved, floorSnap, cho
   const total = tC + ANIM3.TIDY + 60;
 
   // 임시 자리 — 직전 렌더의 2행 배치(floorSnap) 기준
-  //   짝 있음: 그 무더기 위 / 짝 없음: 낸 패=파란(2행 오른끝), 뽑은 패=보라(1행 오른끝)
+  //   짝 있음: 그 무더기 위 / 짝 없음: 낸 패(패)=1행 오른끝, 뽑은 패(더미)=2행 오른끝
   const tempSpotFor = (id, isFlip) => {
     if (chosenRect) return { left: chosenRect.left + 7, top: chosenRect.top + 7 }; // 고른 카드 위로
     const month = Number(id.split('-')[0]);
@@ -4077,9 +4077,10 @@ function animateCardsV3(prevRects, freshMoves, { pendingResolved, floorSnap, cho
     const rowH = cardH + 14;
     const rightEnd = (row) => Math.max(...row.map((p) => p.left + cardW)) + gap;
     const leftStart = (row) => Math.min(...row.map((p) => p.left));
-    if (isFlip) return { left: rightEnd(row1), top: tops[0] }; // 보라 — 1행 오른끝
-    if (row2.length) return { left: rightEnd(row2), top: tops[1] }; // 파란 — 2행 오른끝
-    return { left: leftStart(row1), top: tops[0] + rowH }; // 2행이 비었으면 새 2행 왼쪽
+    if (!isFlip) return { left: rightEnd(row1), top: tops[0] }; // 패 → 1행 오른끝
+    // 더미(뽑은 패) → 2행 오른끝 (2행이 비었으면 새 2행 왼쪽에서 시작)
+    if (row2.length) return { left: rightEnd(row2), top: tops[1] };
+    return { left: leftStart(row1), top: tops[0] + rowH };
   };
 
   // 전환 헬퍼 — 이동량이 0이어도 완료 콜백이 보장된다
