@@ -313,7 +313,9 @@ button:focus-visible { outline: 2px solid var(--gwang-gold); outline-offset: 2px
 
 /* 카드 이동 연출 — FLIP (app.js가 transform을 건다) */
 .card.flying { z-index: 40; pointer-events: none; }
-.card.flying.hero-fly { z-index: 46; } /* 낸·뽑은 패는 겹치는 순간 항상 맨 위 */
+/* 낸·뽑은 패 비행 전용 최상위 레이어 — caps overflow 등에 안 잘리고 항상 맨 위 */
+#fly-layer { position: fixed; inset: 0; pointer-events: none; z-index: 60; }
+#fly-layer .card.flying { z-index: 1; }
 .card.flying.from-stock { box-shadow: 0 0 0 2px var(--gwang-gold), 0 8px 18px rgba(0,0,0,.5); }
 .card.flying.from-dealer { box-shadow: 0 0 0 2px #e8b7a9, 0 8px 18px rgba(0,0,0,.5); }
 
@@ -3689,6 +3691,7 @@ function showScreen(which) {
 /** 판 영역을 비운다 — 이전 대국의 잔상(카드·핸들러)이 남지 않게 */
 function clearBoard() {
   for (const id of ['floor', 'hand', 'dealer-hand', 'dealer-caps', 'my-caps']) $(id).innerHTML = '';
+  flyLayer?.replaceChildren(); // 비행 중이던 히어로 카드 잔재 제거
   $('btn-flip').hidden = true;
   $('table-msg').hidden = true;
 }
@@ -3972,11 +3975,24 @@ function consumeMoves(v) {
 // ③ 획득·정리: 가져갈 패(상대에게서 뺏는 것 포함)가 한번에 갈무리로 가고,
 //    동시에 바닥이 빠른 모션(v1 속도)으로 정리된다 — 효과음·진동·하이라이트 없음.
 // 변경분 하이라이트(흰 테두리 번쩍)는 턴이 끝난 뒤 onSettled에서 한 번에.
+// 최상위 비행 레이어 — 낸/뽑은 패는 여기서 날아 어떤 컨테이너(caps overflow 등)에도
+// 잘리지 않고 항상 맨 위에 그려진다. body 직속이라 #app 쿼리에 안 잡힌다.
+let flyLayer = null;
+function getFlyLayer() {
+  if (!flyLayer) {
+    flyLayer = document.createElement('div');
+    flyLayer.id = 'fly-layer';
+    document.body.appendChild(flyLayer);
+  }
+  return flyLayer;
+}
+
 const ANIM3 = { FLY: 340, GAP: 130, TIDY: 280 };
 function animateCardsV3(prevRects, freshMoves, { pendingResolved, floorSnap, chosenRect, onSettled, choosing = false }) {
   const els = [...document.querySelectorAll('#app .card[data-id]')];
   const newRects = new Map();
   for (const el of els) newRects.set(el.dataset.id, el.getBoundingClientRect());
+  getFlyLayer().replaceChildren(); // 앞 턴의 중단된 비행 잔재 제거
   if (REDUCED_MOTION) { onSettled?.(); return { newRects, animMs: 0 }; }
 
   const playMove = freshMoves.find((m) => m.action === 'play');
@@ -4054,16 +4070,38 @@ function animateCardsV3(prevRects, freshMoves, { pendingResolved, floorSnap, cho
       setTimeout(fin, ms + 90);
     }, delay);
   };
-  const cleanup = (el) => {
+  const layer = getFlyLayer();
+  const cleanup = (el, restore) => {
     el.classList.remove('flying', 'hero-fly');
     el.style.transition = '';
     el.style.transformOrigin = '';
+    if (restore) {
+      // 최상위 레이어에서 원래 자리로 복귀 — 다음 렌더까지 최종 배치 유지
+      for (const p of ['position', 'left', 'top', 'width', 'height', 'margin', 'transform']) el.style[p] = '';
+      // 중간에 새 렌더가 돌아 원 자리가 사라졌다면(같은 id 카드가 이미 판에 있음) 잔재를 버린다
+      const dupe = [...document.querySelectorAll('#app .card[data-id]')].some((c) => c.dataset.id === el.dataset.id);
+      if (dupe || !restore.parent.isConnected) { el.remove(); return; }
+      if (restore.next && restore.next.parentNode === restore.parent) restore.parent.insertBefore(el, restore.next);
+      else restore.parent.appendChild(el);
+    }
   };
 
   for (const mv of movers) {
     const { el, id, from, to, phase } = mv;
     el.classList.add('flying');
-    if (phase !== 2) el.classList.add('hero-fly'); // 낸/뽑은 패는 겹칠 때 항상 맨 위
+    let restore = null;
+    if (phase !== 2) {
+      // 낸/뽑은 패(히어로) — 최상위 레이어로 옮겨 클리핑·스택 문제를 원천 차단
+      el.classList.add('hero-fly');
+      restore = { parent: el.parentNode, next: el.nextSibling };
+      layer.appendChild(el);
+      el.style.position = 'fixed';
+      el.style.left = `${to.left}px`;
+      el.style.top = `${to.top}px`;
+      el.style.width = `${to.width}px`;
+      el.style.height = `${to.height}px`;
+      el.style.margin = '0';
+    }
     el.style.transformOrigin = 'top left';
     el.style.transition = 'none';
     el.style.transform =
@@ -4081,7 +4119,7 @@ function animateCardsV3(prevRects, freshMoves, { pendingResolved, floorSnap, cho
         sfx('card');
         buzz(6);
       });
-      slide(el, '', ANIM3.TIDY, tC, () => cleanup(el));
+      slide(el, '', ANIM3.TIDY, tC, () => cleanup(el, restore));
     }
   }
   setTimeout(() => onSettled?.(), total);
