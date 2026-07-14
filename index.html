@@ -1347,6 +1347,7 @@ html { color-scheme: only light; }
     <div class="set-row"><span>카드 글자 표시</span><button id="set-labels" class="toggle">켬</button></div>
     <div class="set-row"><span>소리</span><button id="set-sound" class="toggle">켬</button></div>
     <div class="set-row"><span>진동</span><button id="set-vibe" class="toggle">켬</button></div>
+    <div class="set-row"><span>전체화면</span><button id="set-fullscreen" class="toggle off">끔</button></div>
     <div class="set-row run-only"><span>노름판을 떠난다</span><button id="set-home">홈으로</button></div>
     <div class="set-row home-only"><span>해금 초기화 (도감·걸개·명전)</span><button id="set-reset">초기화</button></div>
     <div class="btns"><button id="set-close" class="primary">닫기</button></div>
@@ -4774,6 +4775,8 @@ function renderSettingsSheet() {
   t($('set-labels'), settings.labels);
   t($('set-sound'), settings.sound);
   t($('set-vibe'), settings.vibe);
+  const fs = $('set-fullscreen');
+  if (fs) t(fs, !!(document.fullscreenElement || document.webkitFullscreenElement));
 }
 
 function openSettings() {
@@ -5641,16 +5644,48 @@ new ResizeObserver(() => fitFloor()).observe($('table'));
 }
 
 // 전체화면 — 브라우저 정책상 로드 즉시는 불가(사용자 제스처 필요)하므로
-// 첫 탭/클릭에 진입한다. iOS Safari는 요소 전체화면 API를 막으므로 조용히 무시
-// (그쪽은 홈 화면에 추가 시 PWA standalone 메타로 전체화면 실행된다).
-function goFullscreen() {
+// 사용자의 첫 클릭 제스처에 진입한다. iOS Safari는 요소 전체화면 API를 막으므로
+// 조용히 무시(그쪽은 홈 화면에 추가 시 PWA standalone 메타로 전체화면 실행).
+function fsElement() {
+  return document.fullscreenElement || document.webkitFullscreenElement || null;
+}
+function fsSupported() {
+  const el = document.documentElement;
+  return !!(el.requestFullscreen || el.webkitRequestFullscreen || el.msRequestFullscreen);
+}
+function enterFullscreen() {
   const el = document.documentElement;
   const req = el.requestFullscreen || el.webkitRequestFullscreen || el.msRequestFullscreen;
-  if (req && !document.fullscreenElement) {
-    try { const r = req.call(el); if (r && r.catch) r.catch(() => {}); } catch { /* 미지원 */ }
-  }
+  if (!req || fsElement()) return;
+  try { const r = req.call(el); if (r && r.catch) r.catch(() => {}); } catch { /* 미지원 */ }
 }
-window.addEventListener('pointerdown', goFullscreen, { once: true });
+function exitFullscreen() {
+  const ex = document.exitFullscreen || document.webkitExitFullscreen || document.msExitFullscreen;
+  if (!ex || !fsElement()) return;
+  try { const r = ex.call(document); if (r && r.catch) r.catch(() => {}); } catch { /* 미지원 */ }
+}
+function toggleFullscreen() {
+  if (fsElement()) exitFullscreen();
+  else enterFullscreen();
+}
+// 첫 클릭 제스처에 딱 한 번 자동 진입 시도. 이후엔 사용자가 Esc로 나갔다가
+// 다시 눌러도 멋대로 재진입하지 않도록, 시도 즉시 리스너를 뗀다(수동 토글은 설정에서).
+function autoFullscreen() {
+  document.removeEventListener('click', autoFullscreen, true);
+  if (!fsElement()) enterFullscreen();
+}
+if (fsSupported()) document.addEventListener('click', autoFullscreen, true);
+// 설정의 전체화면 토글 + 상태 라벨 반영
+const setFs = $('set-fullscreen');
+if (setFs) {
+  if (!fsSupported()) setFs.closest('.set-row').hidden = true; // API 미지원이면 줄 자체를 숨김
+  setFs.addEventListener('click', () => {
+    toggleFullscreen();
+    setTimeout(renderSettingsSheet, 60); // 상태 반영엔 약간의 지연
+  });
+  document.addEventListener('fullscreenchange', renderSettingsSheet);
+  document.addEventListener('webkitfullscreenchange', renderSettingsSheet);
+}
 
 // 시작 — ?seed= 디버그 진입이면 바로 노름판, 아니면 홈
 const q = Number(new URLSearchParams(location.search).get('seed'));
