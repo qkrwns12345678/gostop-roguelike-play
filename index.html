@@ -5653,11 +5653,24 @@ function fsSupported() {
   const el = document.documentElement;
   return !!(el.requestFullscreen || el.webkitRequestFullscreen || el.msRequestFullscreen);
 }
+// 전체화면 상태에서 세로로 고정 — 폰이 가로로 돌아가는 걸 막는다.
+// 방향 잠금 API는 전체화면일 때만 허용되며, iOS Safari는 미지원(조용히 무시).
+function lockPortrait() {
+  try {
+    const o = screen.orientation;
+    if (o && o.lock) { const r = o.lock('portrait'); if (r && r.catch) r.catch(() => {}); return; }
+  } catch { /* 미지원 */ }
+  const legacy = screen.lockOrientation || screen.webkitLockOrientation || screen.mozLockOrientation;
+  if (legacy) { try { legacy.call(screen, 'portrait'); } catch { /* 무시 */ } }
+}
 function enterFullscreen() {
   const el = document.documentElement;
   const req = el.requestFullscreen || el.webkitRequestFullscreen || el.msRequestFullscreen;
-  if (!req || fsElement()) return;
-  try { const r = req.call(el); if (r && r.catch) r.catch(() => {}); } catch { /* 미지원 */ }
+  if (!req) return;
+  if (fsElement()) { lockPortrait(); return; }
+  // 전체화면 진입 후 세로 고정. 프라미스 미반환(구형 webkit)이면
+  // 아래 fullscreenchange 핸들러가 대신 잠근다.
+  try { const r = req.call(el); if (r && r.then) r.then(lockPortrait, () => {}); } catch { /* 미지원 */ }
 }
 function exitFullscreen() {
   const ex = document.exitFullscreen || document.webkitExitFullscreen || document.msExitFullscreen;
@@ -5668,6 +5681,13 @@ function toggleFullscreen() {
   if (fsElement()) exitFullscreen();
   else enterFullscreen();
 }
+// 전체화면 진입/해제 감지 — 진입하면 세로로 잠그고, 설정 라벨을 갱신
+function onFsChange() {
+  if (fsElement()) lockPortrait();
+  renderSettingsSheet();
+}
+document.addEventListener('fullscreenchange', onFsChange);
+document.addEventListener('webkitfullscreenchange', onFsChange);
 // 첫 클릭 제스처에 딱 한 번 자동 진입 시도. 이후엔 사용자가 Esc로 나갔다가
 // 다시 눌러도 멋대로 재진입하지 않도록, 시도 즉시 리스너를 뗀다(수동 토글은 설정에서).
 function autoFullscreen() {
@@ -5675,7 +5695,7 @@ function autoFullscreen() {
   if (!fsElement()) enterFullscreen();
 }
 if (fsSupported()) document.addEventListener('click', autoFullscreen, true);
-// 설정의 전체화면 토글 + 상태 라벨 반영
+// 설정의 전체화면 토글
 const setFs = $('set-fullscreen');
 if (setFs) {
   if (!fsSupported()) setFs.closest('.set-row').hidden = true; // API 미지원이면 줄 자체를 숨김
@@ -5683,8 +5703,6 @@ if (setFs) {
     toggleFullscreen();
     setTimeout(renderSettingsSheet, 60); // 상태 반영엔 약간의 지연
   });
-  document.addEventListener('fullscreenchange', renderSettingsSheet);
-  document.addEventListener('webkitfullscreenchange', renderSettingsSheet);
 }
 
 // 시작 — ?seed= 디버그 진입이면 바로 노름판, 아니면 홈
