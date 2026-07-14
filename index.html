@@ -3911,13 +3911,31 @@ function fitFloor() {
   }
 }
 
+/** 더미(#stock)를 마지막 행(2행, 없으면 1행)과 같은 높이로 맞춘다 */
+function positionStock() {
+  const stock = $('stock');
+  const floorEl = $('floor');
+  const rows = floorEl.querySelectorAll('.floor-row');
+  const lastRow = rows[rows.length - 1];
+  if (!lastRow || !floorEl.querySelector('.card')) {
+    stock.style.top = '';
+    stock.style.bottom = ''; // 카드 없으면 CSS 기본값
+    return;
+  }
+  // offset은 transform 무시 — 연출 중에도 안정적. #floor·row 모두 offsetParent=#table/#floor
+  const rowTop = floorEl.offsetTop + lastRow.offsetTop; // #table 기준 세로 위치
+  stock.style.bottom = 'auto';
+  stock.style.top = `${rowTop}px`;
+}
+
 /** 렌더 직후 + 다음 프레임 + 늦은 레이아웃 변화까지 흡수하는 이중 재맞춤 */
 let refitTimer = 0;
 function fitFloorSoon() {
   fitFloor();
-  requestAnimationFrame(() => fitFloor());
+  positionStock();
+  requestAnimationFrame(() => { fitFloor(); positionStock(); });
   clearTimeout(refitTimer);
-  refitTimer = setTimeout(fitFloor, 160);
+  refitTimer = setTimeout(() => { fitFloor(); positionStock(); }, 160);
 }
 
 // ---------- 획득패 그룹 ----------
@@ -4058,11 +4076,13 @@ function animateCardsV3(prevRects, freshMoves, { pendingResolved, floorSnap, cho
   const tC = tB + (hasB ? ANIM3.FLY + ANIM3.GAP : 0);
   const total = tC + ANIM3.TIDY + 60;
 
+  const deckRect = $('stock').querySelector('.card')?.getBoundingClientRect() ?? null;
   // 임시 자리 — 직전 렌더의 2행 배치(floorSnap) 기준
-  //   짝 있음: 그 무더기 위 / 짝 없음: 낸 패(패)=1행 오른끝, 뽑은 패(더미)=2행 오른끝
+  //   짝 있음: 그 무더기 위 / 짝 없음: 낸 패(패)=1행 더미 바로 위, 뽑은 패(더미)=더미 위(최상위)
+  //   이후 배치 정리 페이즈에서 월 숫자순으로 재배치된다.
   const tempSpotFor = (id, isFlip) => {
     // 고른 카드 위로 — 선택을 유발한 그 카드(낸/뽑은 패)에만 적용.
-    // 이어지는 더미 뒤집기 등 다른 카드는 제 규칙(짝 무더기 / 2행 오른끝)을 따른다.
+    // 이어지는 더미 뒤집기 등 다른 카드는 제 규칙(짝 무더기 / 더미 기준)을 따른다.
     if (chosenRect && pendingResolved && id === pendingResolved.cardId) {
       return { left: chosenRect.left + 7, top: chosenRect.top + 7 };
     }
@@ -4073,18 +4093,18 @@ function animateCardsV3(prevRects, freshMoves, { pendingResolved, floorSnap, cho
       return { left: pile.left + off, top: pile.top + off };
     }
     const tr = $('table').getBoundingClientRect();
-    if (floorSnap.length === 0) return { left: tr.left + tr.width / 2 - cardW / 2, top: tr.top + tr.height / 2 - cardH / 2 };
-    const tops = [...new Set(floorSnap.map((p) => Math.round(p.top)))].sort((a, b) => a - b);
-    const row1 = floorSnap.filter((p) => Math.round(p.top) === tops[0]);
-    const row2 = tops[1] != null ? floorSnap.filter((p) => Math.round(p.top) === tops[1]) : [];
-    const gap = 8;
-    const rowH = cardH + 14;
-    const rightEnd = (row) => Math.max(...row.map((p) => p.left + cardW)) + gap;
-    const leftStart = (row) => Math.min(...row.map((p) => p.left));
-    if (!isFlip) return { left: rightEnd(row1), top: tops[0] }; // 패 → 1행 오른끝
-    // 더미(뽑은 패) → 2행 오른끝 (2행이 비었으면 새 2행 왼쪽에서 시작)
-    if (row2.length) return { left: rightEnd(row2), top: tops[1] };
-    return { left: leftStart(row1), top: tops[0] + rowH };
+    const tops = floorSnap.length
+      ? [...new Set(floorSnap.map((p) => Math.round(p.top)))].sort((a, b) => a - b)
+      : [];
+    if (isFlip) {
+      // 더미(뽑은 패) 짝 없음 → 더미 위치에 (fly-layer라 자동으로 최상위)
+      if (deckRect) return { left: deckRect.left, top: deckRect.top };
+    } else {
+      // 패에서 낸 짝 없음 → 1행 더미 바로 위 (더미 x, 1행 y)
+      if (deckRect) return { left: deckRect.left, top: tops[0] ?? deckRect.top };
+    }
+    // 더미를 못 찾는 예외 — 담요 중앙
+    return { left: tr.left + tr.width / 2 - cardW / 2, top: tops[0] ?? tr.top + tr.height / 2 - cardH / 2 };
   };
 
   // 전환 헬퍼 — 이동량이 0이어도 완료 콜백이 보장된다
