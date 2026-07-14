@@ -217,7 +217,29 @@ button:focus-visible { outline: 2px solid var(--gwang-gold); outline-offset: 2px
   display: flex; flex-direction: column; justify-content: flex-end; align-items: center;
   text-align: center;
 }
-#stock-count { display: block; margin-top: 6px; font-size: 12px; color: #b6c3a6; }
+/* 더미 장수 — 카드 밑이 아니라 카드 위에 숫자로만 */
+#stock-count {
+  position: absolute; top: 0; left: 0; right: 0; height: var(--card-h);
+  display: flex; align-items: center; justify-content: center;
+  font-family: var(--serif); font-weight: 700; font-size: 24px; color: #fff;
+  text-shadow: 0 1px 3px rgba(0,0,0,.9), 0 0 10px rgba(0,0,0,.7);
+  pointer-events: none; z-index: 4;
+}
+/* 더미에서 뽑은 카드가 뒷면 → 앞면으로 뒤집히는 연출 (앞면 위에 덮인 뒷면이 열린다) */
+.deck-reveal {
+  position: absolute; inset: 0; z-index: 5; border-radius: 6px;
+  border: 1px solid #5c150e;
+  background:
+    repeating-linear-gradient(45deg, transparent 0 7px, rgba(255,255,255,.08) 7px 8px),
+    repeating-linear-gradient(-45deg, transparent 0 7px, rgba(255,255,255,.08) 7px 8px),
+    #7d1f16;
+  transform-origin: center;
+  animation: deckReveal .3s ease-in forwards;
+}
+@keyframes deckReveal {
+  0% { transform: scaleX(1); }
+  100% { transform: scaleX(0); }
+}
 /* 더미에서 뒤집혀 선택을 기다리는 패 — 더미 위에 공개된 채 */
 #stock .card.pending-flip {
   position: absolute; bottom: 46px; right: 8px; z-index: 6;
@@ -4164,6 +4186,15 @@ function animateCardsV3(prevRects, freshMoves, { pendingResolved, floorSnap, cho
     el.style.transform =
       `translate(${from.left - to.left}px, ${from.top - to.top}px) ` +
       `scale(${from.width / to.width}, ${from.height / to.height})`;
+    if (phase === 1) {
+      // 더미에서 뽑은 카드 — 더미 위에서 뒷면→앞면 뒤집기 후 날아간다
+      const revealDelay = Math.max(0, tB - 300);
+      const back = document.createElement('div');
+      back.className = 'deck-reveal';
+      back.style.animationDelay = `${revealDelay}ms`;
+      el.appendChild(back);
+      setTimeout(() => back.remove(), revealDelay + 360);
+    }
     if (phase === 2) {
       // ③ 획득·정리 — 낸 패와 함께 한 박자에, 빠르게, 조용히
       //   짝 카드는 ①·② 동안 바닥에 그대로 있다가(위로 낸 패가 겹침) tC에 함께 이동
@@ -5042,7 +5073,7 @@ function render() {
   inner.appendChild(rowEls[0]);
   if (rowEls[1].childElementCount) inner.appendChild(rowEls[1]);
   floorEl.appendChild(inner);
-  $('stock-count').textContent = `더미 ${v.stockCount}`;
+  $('stock-count').textContent = v.stockCount;
   // 더미에서 뒤집은 패의 선택 대기 — 카드가 더미 위에 공개된 채 기다린다
   $('stock').querySelector('.pending-flip')?.remove();
   if (v.phase === 'choose' && v.pendingChoice.source === 'flip') {
