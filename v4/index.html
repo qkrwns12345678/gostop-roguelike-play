@@ -2503,7 +2503,7 @@ const DEALERS = Object.freeze([
 //
 // 런 레벨 마커 (run/run.js가 해석 — v4 판돈제):
 //   runDefend         감투 — 판을 내줘 엽전을 뜯길 위기를 무효 (런당 1회)
-//   loseRefund        개평 — 판을 내줘 뜯긴 엽전의 비율만큼 돌려받음 (0.5 = 절반)
+//   losePayRatio      개평 — 판을 내줘도 딜러 정산의 이 비율만 뜯긴다 (0.5 = 절반, 딜러 AI도 인지)
 //   clearBonus        곗돈 — 관문 클리어 보상 +N냥
 //   nagariCarryFree   짚신 — 나가리 때 선언 없어도 ×2 이월
 // ============================================================
@@ -2588,13 +2588,15 @@ const bisanggeum = {
   },
 };
 
-/** 개평: 판을 내줘 뜯긴 엽전의 절반을 돌려받는다 (run이 처리 — v4 판돈제) */
+/** 개평: 판을 내줘도 딜러가 정산의 절반만 뜯어간다 (run이 처리 — v4 판돈제).
+ *  "뜯긴 뒤 절반 환급"이 아니라 "뜯기는 양 자체가 절반" — 보유량 상한 적용 전에
+ *  깎이므로 큰 정산에는 그대로 죽을 수 있다 (환급식의 무한 연명 방지). */
 const gaepyeong = {
   id: 'gaepyeong',
   name: '개평',
   grade: '전설',
-  desc: '판을 내줘 뜯긴 엽전의 절반을 돌려받는다',
-  loseRefund: 0.5,
+  desc: '판을 내줘도 딜러가 정산의 절반만 뜯어간다',
+  losePayRatio: 0.5,
 };
 
 /** 밑천: 이자 상한이 사라진다 */
@@ -3057,13 +3059,18 @@ function createRun({ seed, opts = {}, legacyCharmId = null } = {}) {
     });
   }
 
+  /** 개평 등 — 플레이어가 진 판의 지불 배율 (1 = 전액, 0.5 = 절반) */
+  const losePayRatio = () => S.charms.find((c) => c.losePayRatio != null)?.losePayRatio ?? 1;
+
   /**
    * 딜러 고/스톱 정책 — 양쪽 판돈을 아는 AI (engine/game.js).
    * 대국마다 새로 뽑아 쓸 것 (판돈이 판 사이에 변한다).
+   * 개평도 안다: 상대가 절반만 내면 막타에 두 배 정산이 필요하다.
    */
   function dealerPolicy() {
+    const ratio = losePayRatio();
     return makeTargetStopper({
-      oppCoins: S.coins,
+      oppCoins: ratio < 1 ? Math.ceil(S.coins / ratio) : S.coins,
       selfCoins: S.dealerCoins,
       ...(DEALERS[S.gate]?.ai ?? {}),
     });
@@ -3127,7 +3134,6 @@ function createRun({ seed, opts = {}, legacyCharmId = null } = {}) {
     const winner = result.winner;
     let take = result.settle.total;
     let savedBy = null;
-    let refund = 0;
 
     if (winner === 'O' && !S.gamtuUsed && S.charms.some((c) => c.runDefend)) {
       // 도깨비 감투 — 뜯길 위기를 런당 1회 무효
@@ -3136,6 +3142,15 @@ function createRun({ seed, opts = {}, legacyCharmId = null } = {}) {
       take = 0;
       breakdown.push({ label: '도깨비 감투', coins: 0 });
       S.log.push('도깨비 감투가 판돈을 지켰다 (런당 1회)');
+    } else if (winner === 'O' && losePayRatio() < 1 && take > 0) {
+      // 개평 — 딜러 정산의 절반만 뜯긴다. 보유량 상한 "이전"에 깎으므로
+      // 환급식과 달리 큰 정산에는 그대로 죽을 수 있다 (무한 연명 방지).
+      const gaepyeong = S.charms.find((c) => c.losePayRatio != null);
+      const full = take;
+      take = Math.floor(take * gaepyeong.losePayRatio);
+      savedBy = gaepyeong.name;
+      breakdown.push({ label: gaepyeong.name, coins: full - take });
+      S.log.push(`${gaepyeong.name}: 딜러 정산 ${full}점 중 절반(${take}냥)만 내줬다`);
     }
 
     const taken = winner === 'P' ? Math.min(take, S.dealerCoins) : Math.min(take, S.coins);
@@ -3145,16 +3160,6 @@ function createRun({ seed, opts = {}, legacyCharmId = null } = {}) {
     } else {
       S.coins -= taken;
       S.dealerCoins += taken;
-      // 개평 — 뜯긴 엽전의 절반을 돌려받는다 (노름판 인심)
-      const gaepyeong = S.charms.find((c) => c.loseRefund);
-      if (gaepyeong && taken > 0) {
-        refund = Math.min(Math.floor(taken * gaepyeong.loseRefund), S.dealerCoins);
-        S.dealerCoins -= refund;
-        S.coins += refund;
-        savedBy = gaepyeong.name;
-        breakdown.push({ label: gaepyeong.name, coins: refund });
-        S.log.push(`${gaepyeong.name}: 뜯긴 ${taken}냥 중 ${refund}냥을 돌려받았다`);
-      }
     }
     charmMatchEnd(events, result, breakdown);
 
@@ -3177,7 +3182,7 @@ function createRun({ seed, opts = {}, legacyCharmId = null } = {}) {
     S.attempt += 1;
     const who = winner === 'P' ? '나' : '딜러';
     S.log.push(`관문 ${S.gate + 1} — ${who} +${taken}냥 (내 ${S.coins} : 딜러 ${S.dealerCoins})`);
-    return { outcome: 'take', taken, refund, savedBy, coins: { P: S.coins, O: S.dealerCoins }, stake0, winner, breakdown };
+    return { outcome: 'take', taken, savedBy, coins: { P: S.coins, O: S.dealerCoins }, stake0, winner, breakdown };
   }
 
   // ---------- 저승 객주 ----------
@@ -3330,6 +3335,7 @@ function createRun({ seed, opts = {}, legacyCharmId = null } = {}) {
       charms: S.charms.map((c) => ({ id: c.id, name: c.name, grade: c.grade, desc: c.desc })),
       charmLimit: R.charmLimit,
       carry: { P: [...S.carry.P], O: [...S.carry.O] },
+      losePayRatio: losePayRatio(), // 개평 — 진 판 지불 배율 (UI 게이지·문구용)
       interestPreview: interest(),
       shop: S.shop
         ? {
@@ -4452,8 +4458,8 @@ function showResult(v) {
         title.textContent = '도깨비 감투가 판돈을 지켰다';
         note.textContent = `뜯길 위기를 감투가 대신 뒤집어썼다 (런당 1회). 내 판돈 ${sum.coins.P}냥 그대로 — 다음 판을 깐다.`;
       } else if (sum.savedBy) {
-        title.textContent = `딜러가 ${sum.taken}냥을 뜯어갔다 — ${sum.savedBy}`;
-        note.textContent = `${sum.savedBy}으로 ${sum.refund}냥을 돌려받았다. 내 판돈 ${sum.coins.P}냥 · 딜러 판돈 ${sum.coins.O}냥.`;
+        title.textContent = `${sum.savedBy} — 절반만 뜯겼다`;
+        note.textContent = `딜러 정산 ${r.settle.total}점, 개평 덕에 ${sum.taken}냥만 내줬다. 내 판돈 ${sum.coins.P}냥 · 딜러 판돈 ${sum.coins.O}냥.`;
       } else {
         title.textContent = `딜러가 엽전 ${sum.taken}냥을 뜯어갔다`;
         note.textContent = `내 판돈 ${sum.coins.P}냥 · 딜러 판돈 ${sum.coins.O}냥. 내 판돈이 0이 되면 그대로 끝이다.`;
@@ -5035,7 +5041,8 @@ function render() {
   renderCaps($('dealer-caps'), v.caps.O);
   fitCaps($('dealer-caps'));
   // 딜러의 이번 판 정산이 내 판돈을 위협하면 달아오르게
-  $('dealer-total').classList.toggle('hot', dp.total >= rv.coins - 2 && dp.total > 0);
+  const dpHit = Math.floor(dp.total * (rv.losePayRatio ?? 1)); // 개평이면 절반만 맞는다
+  $('dealer-total').classList.toggle('hot', dpHit >= rv.coins - 2 && dpHit > 0);
 
   // 바닥 — 월 숫자순 정렬, 2행 최대 6칸 왼쪽 정렬 (행1 우선, 짝 겹침은 1칸)
   const floorEl = $('floor');
@@ -5140,7 +5147,7 @@ function render() {
   fxScore($('sp-total'), prevTotals.P, pv.total);
   prevTotals.P = pv.total;
   $('sp-total').textContent = `${pv.total}점`; // v4: 이번 판 점수만
-  stakeGauge($('goal-acc'), $('goal-fill'), rv.coins, dp.total, rv.gateStartCoins ?? rv.coins);
+  stakeGauge($('goal-acc'), $('goal-fill'), rv.coins, dpHit, rv.gateStartCoins ?? rv.coins);
   const chipsEl = $('sp-mult-chips');
   chipsEl.innerHTML = '';
   for (const m of pv.mults) {
