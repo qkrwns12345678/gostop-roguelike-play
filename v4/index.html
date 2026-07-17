@@ -1227,6 +1227,35 @@ html { color-scheme: only light; }
   pointer-events: none;
 }
 
+/* ---------- 흔들기 선언·공개 + 폭탄피 ---------- */
+.shake-cards { display: flex; gap: 10px; justify-content: center; margin: 12px 0 6px; }
+#shake-ask { z-index: 96; }
+#shake-reveal {
+  position: fixed; left: 50%; top: 38%; transform: translate(-50%, -50%);
+  z-index: 96; pointer-events: none; text-align: center;
+  background: rgba(15, 12, 7, .88); border: 1px solid #b3a488; border-radius: 12px;
+  padding: 14px 20px 16px; box-shadow: 0 18px 50px rgba(0,0,0,.6);
+  animation: rise .35s ease both;
+}
+#shake-reveal > b { color: var(--dan-red); font-family: var(--serif); font-size: 20px;
+  text-shadow: 0 1px 0 rgba(0,0,0,.8); display: block; margin-bottom: 4px; }
+@keyframes rise { from { opacity: 0; transform: translate(-50%, -40%); } to { opacity: 1; transform: translate(-50%, -50%); } }
+/* 폭탄피 — 손패 대신 내는 패스권 (뒷면풍 + 금박 표기) */
+.card.bomb-pass {
+  background-color: #7a1c13;
+  background-image:
+    radial-gradient(ellipse 90% 70% at 50% 32%, rgba(255,190,150,0.22), transparent 60%),
+    repeating-linear-gradient(45deg, rgba(0,0,0,0.10) 0 2px, transparent 2px 5px);
+  border: 1px solid #4e1109;
+  box-shadow: inset 0 0 0 3px rgba(255,214,170,0.14), 0 2px 4px rgba(0,0,0,.35);
+  display: flex; align-items: center; justify-content: center;
+}
+.card.bomb-pass span {
+  writing-mode: vertical-rl; letter-spacing: 4px;
+  font-family: var(--serif); font-weight: 800; font-size: 15px; color: #e8d9a8;
+  text-shadow: 0 1px 2px rgba(0,0,0,.7);
+}
+
 </style>
 </head>
 <body>
@@ -1328,6 +1357,25 @@ html { color-scheme: only light; }
 
   <!-- 사건 도장 -->
   <div id="stamp" hidden><span id="stamp-text"></span></div>
+
+  <!-- 흔들기 선언 — 같은 월 3장을 낼 때 선택 -->
+  <div id="shake-ask" class="overlay" hidden>
+    <div class="sheet">
+      <h2>흔들기<span class="or">냐</span></h2>
+      <p class="note">같은 월 <b>석 장</b> — 상대에게 보이고 이 판 배수 <b>×2</b>를 건다.<br />흔들면 이 패를 그대로 내려놓는다.</p>
+      <div id="shake-cards" class="shake-cards"></div>
+      <div class="btns">
+        <button id="shake-no">그냥 낸다</button>
+        <button id="shake-yes" class="danger">흔든다!</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 딜러 흔들기 공개 — 3장을 잠깐 보여준다 -->
+  <div id="shake-reveal" hidden>
+    <b>딜러 흔들기! ×2</b>
+    <div id="shake-reveal-cards" class="shake-cards"></div>
+  </div>
 
   <!-- 승리 예고 배너 — 고 선언 후 (은행+현재)가 목표를 처음 넘겼을 때 한 번 -->
   <div id="win-banner" hidden>다음에 <b>스톱</b>하면 관문 승리!</div>
@@ -2017,13 +2065,7 @@ function deal(rng) {
       if (Object.values(byMonth).some((n) => n === 4)) return { chongtong: who, hands, floor, stock };
     }
 
-    const shake = { P: 0, O: 0 };
-    for (const who of ['P', 'O']) {
-      const byMonth = {};
-      for (const c of hands[who]) byMonth[c.month] = (byMonth[c.month] || 0) + 1;
-      shake[who] = Object.values(byMonth).filter((n) => n === 3).length;
-    }
-    return { hands, floor, stock, shake };
+    return { hands, floor, stock };
   }
   throw new Error('배분 실패 (바닥 총통 반복)');
 }
@@ -2056,9 +2098,14 @@ function createMatch({ seed, config = DEFAULT_CONFIG, dealerConfig = null, charm
   };
   let T = null; // 진행 중인 턴 컨텍스트 { who, auto, policy, captured, steals, pendingPlay }
 
-  const state = d.chongtong
-    ? { hands: d.hands, floor: d.floor, stock: d.stock, caps: { P: [], O: [] }, shake: { P: 0, O: 0 }, go: { P: 0, O: 0 }, scoreAtLastGo: { P: 0, O: 0 }, ppeok: { P: 0, O: 0 } }
-    : { hands: d.hands, floor: d.floor, stock: d.stock, caps: { P: [], O: [] }, shake: d.shake, go: { P: 0, O: 0 }, scoreAtLastGo: { P: 0, O: 0 }, ppeok: { P: 0, O: 0 } };
+  // 흔들기는 배분 시 자동이 아니라 "그 패를 낼 때 선언"한다 (온라인 맞고 표준) —
+  // shake는 선언 횟수, shaken은 이미 흔든 월(중복 선언 방지), bombPasses는 폭탄피.
+  const state = {
+    hands: d.hands, floor: d.floor, stock: d.stock,
+    caps: { P: [], O: [] }, shake: { P: 0, O: 0 }, shaken: { P: [], O: [] },
+    bombPasses: { P: 0, O: 0 },
+    go: { P: 0, O: 0 }, scoreAtLastGo: { P: 0, O: 0 }, ppeok: { P: 0, O: 0 },
+  };
 
   // 이벤트 발행 — 발생 주체의 부적 onEvent 훅이 즉시 반응한다 (삼재 부적 등)
   function emit(e) {
@@ -2086,8 +2133,6 @@ function createMatch({ seed, config = DEFAULT_CONFIG, dealerConfig = null, charm
     M.result = { winner: d.chongtong, reason: '총통', settle: s };
     M.phase = 'ended';
   } else {
-    if (state.shake.P) emit({ who: 'P', kind: '흔들기', detail: `${state.shake.P}회` });
-    if (state.shake.O) emit({ who: 'O', kind: '흔들기', detail: `${state.shake.O}회` });
     // 딜러 기믹(배분 개입) → 부적 onMatchStart 순으로 판을 비튼다
     for (const mut of mutators) mut.onDeal?.(state, rng); // 기믹도 시드 RNG 공유 (결정론)
     for (const who of ['P', 'O']) {
@@ -2126,14 +2171,39 @@ function createMatch({ seed, config = DEFAULT_CONFIG, dealerConfig = null, charm
     removePile(state.floor, pile);
     T.steals++;
     state.shake[who]++;
+    state.bombPasses[who] += 2; // 폭탄피 — 손패 3장을 한꺼번에 썼으니 두 턴은 안 내고 뒤집기만 가능
     emit({ who, kind: '폭탄', detail: `${bombSet[0].month}월` });
     doFlip();
   }
 
-  function doPlay(cardArg) {
+  /** 같은 월 3장 트리오 중 "흔들 수 있는" 것 — 바닥에 짝이 없어야 한다 (있으면 폭탄) */
+  function shakeableSet(who, month) {
+    const hand = state.hands[who];
+    const set = hand.filter((c) => c.month === month);
+    if (set.length !== 3) return null;
+    if (findPile(state.floor, month)) return null;
+    if (state.shaken[who].includes(month)) return null; // 같은 월은 한 번만
+    return set;
+  }
+
+  function declareShake(who, set) {
+    state.shake[who]++;
+    state.shaken[who].push(set[0].month);
+    emit({ who, kind: '흔들기', detail: `${set[0].month}월`, cards: set.map((c) => ({ ...c })) });
+  }
+
+  function doPlay(cardArg, opts = {}) {
     const who = T.who;
     const hand = state.hands[who];
     if (hand.length === 0) return doFlip(); // 손패 없음 → 더미만 뒤집기
+
+    // 폭탄피 — 손패가 있어도 안 내고 더미만 뒤집는다 (폭탄 1회당 2장)
+    if (!T.auto && cardArg === null) {
+      if (state.bombPasses[who] <= 0) throw new Error('폭탄피가 없다');
+      state.bombPasses[who]--;
+      emit({ who, kind: '폭탄피', detail: `남은 ${state.bombPasses[who]}장` });
+      return doFlip();
+    }
 
     const byMonth = {};
     for (const c of hand) (byMonth[c.month] ||= []).push(c);
@@ -2144,11 +2214,23 @@ function createMatch({ seed, config = DEFAULT_CONFIG, dealerConfig = null, charm
     let card;
     if (T.auto) {
       if (bombSet) return doBomb(bombSet);
+      // 폭탄피 소진 휴리스틱 — 바닥에 짝이 하나도 없으면 패를 아끼고 뒤집기만
+      if (state.bombPasses[who] > 0 && !hand.some((c) => findPile(state.floor, c.month))) {
+        state.bombPasses[who]--;
+        emit({ who, kind: '폭탄피', detail: `남은 ${state.bombPasses[who]}장` });
+        return doFlip();
+      }
       card = (who === 'O' && dealerChoose ? dealerChoose(hand, state.floor) : null) ?? chooseCard(hand, state.floor);
+      const set = shakeableSet(who, card.month);
+      if (set) declareShake(who, set); // AI는 흔들 수 있으면 항상 흔든다 (×2는 공짜에 가깝다)
     } else {
       card = hand.find((c) => c.id === cardArg);
       if (!card) throw new Error('손에 없는 패입니다: ' + cardArg);
       if (bombSet && bombSet[0].month === card.month) return doBomb(bombSet); // 트리오를 내면 자동 폭탄
+      if (opts.shake) {
+        const set = shakeableSet(who, card.month);
+        if (set) declareShake(who, set); // 조건이 안 맞으면 조용히 무시 (일반 내기로 진행)
+      }
     }
 
     hand.splice(hand.indexOf(card), 1);
@@ -2373,10 +2455,10 @@ function createMatch({ seed, config = DEFAULT_CONFIG, dealerConfig = null, charm
   // ---------- 공개 API ----------
 
   /** 현재 차례(사람)가 손패를 냄. 손패가 없으면 playCard(null)로 더미만 뒤집기. */
-  function playCard(cardId) {
+  function playCard(cardId, opts = {}) {
     if (M.phase !== 'play') throw new Error(`playCard 불가: phase=${M.phase}`);
     if (!beginTurn(M.turn)) return;
-    doPlay(cardId);
+    doPlay(cardId, opts);
   }
 
   /** phase='choose'일 때 바닥 2장 중 가져갈 패 선택 */
@@ -2447,6 +2529,8 @@ function createMatch({ seed, config = DEFAULT_CONFIG, dealerConfig = null, charm
       caps: { P: [...state.caps.P], O: [...state.caps.O] },
       go: { ...state.go },
       shake: { ...state.shake },
+      shaken: [...state.shaken.P],          // 내가 이미 흔든 월 (UI 중복 방지)
+      bombPasses: { ...state.bombPasses },  // 폭탄피 — 손패 대신 내는 패스권
       preview: prev('P'),
       dealerPreview: prev('O'),
       pendingChoice: M.pendingChoice
@@ -3767,7 +3851,7 @@ function makeAnimV2({ $, sfx, buzz, reduced }) {
 
 const HANJA = ['', '一', '二', '三', '四', '五', '六', '七', '八', '九', '十', '十一', '十二'];
 const YEOL_SHORT = { 2: '꾀꼬리', 4: '두견새', 5: '다리', 6: '나비', 7: '멧돼지', 8: '기러기', 9: '술잔', 10: '사슴', 12: '제비' };
-const STAMP_KINDS = new Set(['뻑', '쪽', '따닥', '폭탄', '싸쓸이', '뻑먹기', '총통', '쓰리뻑', '흔들기']);
+const STAMP_KINDS = new Set(['뻑', '쪽', '따닥', '폭탄', '싸쓸이', '뻑먹기', '총통', '쓰리뻑', '흔들기', '폭탄피']);
 const TYPE_ORDER = { [TYPE.GWANG]: 0, [TYPE.YEOL]: 1, [TYPE.TTI]: 2, [TYPE.PI]: 3 };
 
 const $ = (id) => document.getElementById(id);
@@ -4255,12 +4339,42 @@ function pumpStamps() {
   }, 850);
 }
 
+// ---------- 흔들기 — 선언 확인 창(내 차례) + 딜러 공개 연출 ----------
+let shakePendingId = null;
+function openShakeAsk(card, trio) {
+  shakePendingId = card.id;
+  const box = $('shake-cards');
+  box.innerHTML = '';
+  for (const c of trio) box.appendChild(cardEl(c));
+  $('shake-ask').hidden = false;
+}
+function closeShakeAsk(withShake) {
+  const id = shakePendingId;
+  shakePendingId = null;
+  $('shake-ask').hidden = true;
+  if (!id || !match) return;
+  match.playCard(id, withShake ? { shake: true } : {});
+  render();
+}
+let shakeRevealTimer = 0;
+function showShakeReveal(cards) {
+  const box = $('shake-reveal-cards');
+  box.innerHTML = '';
+  for (const c of cards) box.appendChild(cardEl(c));
+  $('shake-reveal').hidden = false;
+  sfx('stamp');
+  buzz(30);
+  clearTimeout(shakeRevealTimer);
+  shakeRevealTimer = setTimeout(() => { $('shake-reveal').hidden = true; }, 2200);
+}
+
 function consumeEvents(v) {
   const fresh = v.events.slice(seenEvents);
   seenEvents = v.events.length;
   for (const e of fresh) {
     if (STAMP_KINDS.has(e.kind)) stampQueue.push(e.kind === '뻑먹기' ? '뻑 먹기' : e.kind);
     if (e.kind === '고') stampQueue.push(e.detail.replace('(강제)', ''));
+    if (e.kind === '흔들기' && e.who === 'O' && e.cards) showShakeReveal(e.cards); // 딜러가 흔든 3장 공개
   }
   pumpStamps();
   return fresh;
@@ -5416,6 +5530,11 @@ function render() {
       };
       el.addEventListener('click', () => {
         hint(false);
+        const trio = v.hand.filter((h) => h.month === c.month);
+        const shakeable = trio.length === 3
+          && !v.floor.some((p) => p.month === c.month)
+          && !(v.shaken ?? []).includes(c.month);
+        if (shakeable) { openShakeAsk(c, trio); return; }
         match.playCard(c.id);
         render();
       });
@@ -5435,6 +5554,20 @@ function render() {
       });
     }
     handEl.appendChild(el);
+  }
+  // 폭탄피 — 폭탄으로 아낀 패스권. 내는 대신 더미만 뒤집는다 (온라인 맞고 표준 시각화)
+  for (let i = 0; i < (v.bombPasses?.P ?? 0); i++) {
+    const t = document.createElement('div');
+    t.className = 'card bomb-pass';
+    t.innerHTML = '<span>폭탄피</span>';
+    t.title = '손패를 내지 않고 더미만 뒤집는다';
+    if (myTurn) {
+      t.addEventListener('click', () => {
+        match.playCard(null);
+        render();
+      });
+    }
+    handEl.appendChild(t);
   }
   // 손패가 비면 항상 진행 버튼 제공 — 더미까지 비면(교착) 잠시 후 자동으로 차례를 넘긴다
   $('btn-flip').hidden = !(myTurn && v.hand.length === 0);
@@ -5646,6 +5779,8 @@ $('btn-flip').addEventListener('click', () => {
   match.playCard(null);
   render();
 });
+$('shake-yes').addEventListener('click', () => closeShakeAsk(true));
+$('shake-no').addEventListener('click', () => closeShakeAsk(false));
 $('btn-go').addEventListener('click', () => {
   match.decide('go');
   render();
@@ -5829,6 +5964,12 @@ tableEl.addEventListener('drop', (e) => {
   if (!id || !match) return;
   const v = match.view();
   if (v.phase === 'play' && v.turn === 'P' && v.hand.some((c) => c.id === id)) {
+    const card = v.hand.find((c) => c.id === id);
+    const trio = v.hand.filter((h) => h.month === card.month);
+    if (trio.length === 3 && !v.floor.some((p) => p.month === card.month) && !(v.shaken ?? []).includes(card.month)) {
+      openShakeAsk(card, trio);
+      return;
+    }
     match.playCard(id);
     render();
   }
