@@ -1220,6 +1220,13 @@ html { color-scheme: only light; }
 .skin-card .sk-grade.t-2 { color: var(--tier-2); }
 .skin-card .sk-grade.t-3 { color: var(--tier-3); }
 
+/* ---------- 타짜의 눈 — 더미 맨 위 패가 흐릿하게 비친다 ---------- */
+#stock .card.stock-peek {
+  position: absolute; top: 0; left: 0; z-index: 2; /* 뒷면 위, 장수 숫자(z4)·뒤집기 연출(z3) 아래 */
+  opacity: .5; filter: saturate(.7) brightness(.9);
+  pointer-events: none;
+}
+
 </style>
 </head>
 <body>
@@ -5308,6 +5315,14 @@ function render() {
   if (rowEls[1].childElementCount) inner.appendChild(rowEls[1]);
   floorEl.appendChild(inner);
   $('stock-count').textContent = v.stockCount;
+  // 타짜의 눈 — 더미 맨 위 패를 흐릿하게 비춘다 (엔진이 부적 보유 시에만 stockTop을 노출)
+  const stockEl = $('stock');
+  stockEl.querySelector('.stock-peek')?.remove();
+  if (v.stockTop) {
+    const ghost = cardEl(v.stockTop);
+    ghost.classList.add('stock-peek');
+    stockEl.appendChild(ghost);
+  }
   // 더미에서 뒤집은 패의 선택 대기 — 카드가 더미 위에 공개된 채 기다린다
   $('stock').querySelector('.pending-flip')?.remove();
   if (v.phase === 'choose' && v.pendingChoice.source === 'flip') {
