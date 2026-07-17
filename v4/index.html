@@ -2550,7 +2550,7 @@ const DEALERS = Object.freeze([
     dialog: '…배가 고프다. 네 피로 요기 좀 하자.',
     mutators: [agwi],
     charms: [],
-    ai: { stopAt: 5, maxGo: 1 },
+    ai: { stopAt: 7, maxGo: 1 },
   },
   {
     name: '애기 도깨비',
@@ -2558,7 +2558,7 @@ const DEALERS = Object.freeze([
     dialog: '히히, 바닥에 장난 좀 쳐놨다? 화내기 없기다!',
     mutators: [aegiDokkaebi],
     charms: ['kkachibal'],
-    ai: { stopAt: 5, maxGo: 1 },
+    ai: { stopAt: 7, maxGo: 1 },
   },
   {
     name: '구미호',
@@ -2566,16 +2566,16 @@ const DEALERS = Object.freeze([
     dialog: '어머, 맛있는 혼이 굴러들어왔네. 천천히 즐겨볼까?',
     mutators: [],
     charms: ['hak_dari', 'neunggureongi', 'bamsonnim'],
-    ai: { stopAt: 5, maxGo: 1 },
+    ai: { stopAt: 7, maxGo: 1 },
   },
   {
     // 중간보스(구미호) 직후 — 판돈 스파이크로 불어난 주머니를 능구렁이(피 압박)로 견제
     name: '저승사자',
-    gimmick: '서두르는 낫 — 6점만 되면 곧장 거둔다',
+    gimmick: '서두르는 낫 — 7점만 나면 그 즉시 거둔다',
     dialog: '시간이 없다. 명부에 이름을 적기 전에 끝내지.',
     mutators: [],
     charms: ['tajja_nun', 'neunggureongi'],
-    ai: { stopAt: 6, maxGo: 1 },
+    ai: { stopAt: 7, maxGo: 1 },
   },
   {
     // 관문 4에 이어 부자 노름꾼 견제 구간 — 피·띠 선점 둘 다 물고 시작한다
@@ -2584,7 +2584,7 @@ const DEALERS = Object.freeze([
     dialog: '…… (얼굴 없는 낯이 패만 물끄러미 내려다본다)',
     mutators: [],
     charms: ['bisanggeum', 'bamsonnim'],
-    ai: { stopAt: 8, maxGo: 2 },
+    ai: { stopAt: 10, maxGo: 2 },
   },
   {
     name: '장승',
@@ -2592,7 +2592,7 @@ const DEALERS = Object.freeze([
     dialog: '천 년을 서서 기다렸다. 노름 한 판쯤, 서두를 것 없지.',
     mutators: [],
     charms: ['gombangdae'],
-    ai: { stopAt: 8, maxGo: 2 },
+    ai: { stopAt: 10, maxGo: 2 },
   },
   {
     // 장승(판돈 125) 직후 최강 일반 관문 — 부적 4장 + 최저 stopAt(가장 강한 노브)
@@ -2601,7 +2601,7 @@ const DEALERS = Object.freeze([
     dialog: '어둠 속에선 네 패가 훤히 보인다. 숨겨봐야 소용없어.',
     mutators: [],
     charms: ['sui_jarak', 'samjae', 'kkachibal', 'yeokmasal'],
-    ai: { stopAt: 5, maxGo: 1 },
+    ai: { stopAt: 7, maxGo: 1 },
   },
   {
     name: '염라대왕',
@@ -2609,7 +2609,7 @@ const DEALERS = Object.freeze([
     dialog: '여기까지 온 노름꾼은 오랜만이군. 좋다 — 목숨을 걸어라.',
     mutators: [],
     charms: ['oksae', 'yeomra_jangbu', 'neunggureongi'],
-    ai: { stopAt: 5, maxGo: 2 },
+    ai: { stopAt: 8, maxGo: 2 },
   },
 ]);
 
@@ -3092,7 +3092,7 @@ const RUN_DEFAULTS = Object.freeze({
   shopCharmSlots: 3,  // 상점 부적 슬롯
   rerollBase: 5,      // 리롤 시작가
   rerollStep: 5,      // 리롤 누진폭
-  goThreshold: 3,     // 고/스톱 창 — 플레이어·딜러 공용 (GDD §5.4)
+  goThreshold: 7,     // 고/스톱 창 — 맞고 표준 7점 (플레이어·딜러 공용, GDD §5.4)
   ppeokBonusCoins: 2, // 첫뻑 즉시 지급 — 만든 쪽이 상대 엽전을 바로 뜯는다 (맞고 "첫뻑 돈 받기"의 판돈제 각색)
 });
 
