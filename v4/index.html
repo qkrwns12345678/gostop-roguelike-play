@@ -1414,6 +1414,7 @@ html { color-scheme: only light; }
       <p class="note">같은 월 <b>석 장</b> — 상대에게 보이고 이 판 배수 <b>×2</b>를 건다.<br />흔들면 이 패를 그대로 내려놓는다.</p>
       <div id="shake-cards" class="shake-cards"></div>
       <div class="btns">
+        <button id="shake-cancel">무른다</button>
         <button id="shake-no">그냥 낸다</button>
         <button id="shake-yes" class="danger">흔든다!</button>
       </div>
@@ -1546,7 +1547,8 @@ html { color-scheme: only light; }
   <div class="sheet settings-sheet">
     <h2>설정</h2>
     <div class="set-row"><span>카드 글자 표시</span><button id="set-labels" class="toggle">켬</button></div>
-    <div class="set-row"><span>소리</span><button id="set-sound" class="toggle">켬</button></div>
+    <div class="set-row"><span>효과음</span><button id="set-sfx" class="toggle">켬</button></div>
+    <div class="set-row"><span>배경음악</span><button id="set-bgm" class="toggle">켬</button></div>
     <div class="set-row"><span>진동</span><button id="set-vibe" class="toggle">켬</button></div>
     <div class="set-row"><span>전체화면</span><button id="set-fullscreen" class="toggle off">끔</button></div>
     <div class="set-row run-only"><span>노름판을 떠난다</span><button id="set-home">홈으로</button></div>
@@ -3991,7 +3993,9 @@ const store = {
 };
 const settings = {
   labels: store.get('ssg-labels', '1') !== '0',
-  sound: store.get('ssg-sound', '1') !== '0',
+  // 효과음·배경음악 분리 토글 — 구버전 단일 키(ssg-sound) 값을 초기값으로 승계
+  sfx: store.get('ssg-sfx', store.get('ssg-sound', '1')) !== '0',
+  bgm: store.get('ssg-bgm', store.get('ssg-sound', '1')) !== '0',
   vibe: store.get('ssg-vibe', '1') !== '0',
 };
 /** 깨진 저장값이 앱을 죽이지 않게 — 파싱 실패는 기본값으로 */
@@ -4065,7 +4069,7 @@ function playBuf(id, { vol = 1, rate = 1, jitter = 0 } = {}) {
   return true;
 }
 function sfx(kind) {
-  if (!settings.sound) return;
+  if (!settings.sfx) return;
   try {
     loadSfxAssets();
     const m = SFX_MAP[kind];
@@ -4109,7 +4113,7 @@ function setAmbient(name) {
   try { applyAmbient(); } catch { /* 오디오 미지원 */ }
 }
 function applyAmbient() {
-  const want = settings.sound ? ambientWant : null;
+  const want = settings.bgm ? ambientWant : null;
   if (want === ambientCur) return;
   if (ambientSrc) { // 짧은 페이드아웃으로 끈다
     const src = ambientSrc;
@@ -4137,7 +4141,7 @@ function applyAmbient() {
 }
 // 모바일 자동재생 정책 — 첫 터치에서 오디오 언락 + 디코드 + 배경음 시작
 window.addEventListener('pointerdown', () => {
-  if (!settings.sound) return;
+  if (!settings.sfx && !settings.bgm) return;
   try { loadSfxAssets(); applyAmbient(); } catch { /* 미지원 */ }
 }, { capture: true });
 function buzz(ms) {
@@ -4156,7 +4160,7 @@ const animV2 = makeAnimV2({ $, sfx, buzz, reduced: REDUCED_MOTION });
 const SKIN_TIERS = ['일반', '고급', '희귀', '전설'];
 const tierOf = (grade) => SKIN_TIERS.indexOf(grade);
 const baseGradeOf = (gate) => (gate >= 8 ? '전설' : gate >= 6 ? '희귀' : gate >= 3 ? '고급' : '일반');
-const HANJA_SUFFIX = ['', '', ' 二', ' 三', ' 四'];
+const HANJA_SUFFIX = ['', '', ' 二', ' 三', ' 四', ' 五'];
 const variantSkins = Object.keys(SKIN_ART_ASSETS)
   .map((id) => id.match(/^(player|dealer-(\d+))-(\d+)$/))
   .filter(Boolean)
@@ -4585,18 +4589,28 @@ function pumpStamps() {
 
 // ---------- 흔들기 — 선언 확인 창(내 차례) + 딜러 공개 연출 ----------
 let shakePendingId = null;
+/** 확인창/공개 연출용 카드 사본 — data-id를 벗겨서 넣는다.
+ *  판 위 카드와 id가 겹치면 애니메이션 rect 수집(#app .card[data-id])이
+ *  숨은 사본(0×0)에 오염돼 그 카드들의 이동 연출이 깨진다. */
+function cardCopyEl(card) {
+  const el = cardEl(card);
+  el.removeAttribute('data-id');
+  return el;
+}
 function openShakeAsk(card, trio) {
   shakePendingId = card.id;
   const box = $('shake-cards');
   box.innerHTML = '';
-  for (const c of trio) box.appendChild(cardEl(c));
+  for (const c of trio) box.appendChild(cardCopyEl(c));
   $('shake-ask').hidden = false;
 }
+/** withShake: true=흔들고 낸다 / false=그냥 낸다 / null=무르기(내지 않는다) */
 function closeShakeAsk(withShake) {
   const id = shakePendingId;
   shakePendingId = null;
   $('shake-ask').hidden = true;
-  if (!id || !match) return;
+  $('shake-cards').innerHTML = '';
+  if (withShake === null || !id || !match) return; // 무른다 — 패는 손에 그대로
   match.playCard(id, withShake ? { shake: true } : {});
   render();
 }
@@ -4604,12 +4618,15 @@ let shakeRevealTimer = 0;
 function showShakeReveal(cards) {
   const box = $('shake-reveal-cards');
   box.innerHTML = '';
-  for (const c of cards) box.appendChild(cardEl(c));
+  for (const c of cards) box.appendChild(cardCopyEl(c));
   $('shake-reveal').hidden = false;
   sfx('stamp');
   buzz(30);
   clearTimeout(shakeRevealTimer);
-  shakeRevealTimer = setTimeout(() => { $('shake-reveal').hidden = true; }, 2200);
+  shakeRevealTimer = setTimeout(() => {
+    $('shake-reveal').hidden = true;
+    $('shake-reveal-cards').innerHTML = '';
+  }, 2200);
 }
 
 function consumeEvents(v) {
@@ -4650,7 +4667,7 @@ function getFlyLayer() {
   return flyLayer;
 }
 
-const ANIM3 = { FLY: 340, GAP: 130, TIDY: 280 };
+const ANIM3 = { FLY: 340, GAP: 130, TIDY: 280, MIN_GAP: 400 }; // MIN_GAP: 내기→뒤집기 최소 간격
 function animateCardsV3(prevRects, freshMoves, { pendingResolved, floorSnap, chosenRect, onSettled, choosing = false }) {
   const els = [...document.querySelectorAll('#app .card[data-id]')];
   const newRects = new Map();
@@ -4695,7 +4712,10 @@ function animateCardsV3(prevRects, freshMoves, { pendingResolved, floorSnap, cho
 
   const hasA = movers.some((m) => m.phase === 0);
   const hasB = movers.some((m) => m.phase === 1);
-  const tB = hasA ? ANIM3.FLY + ANIM3.GAP : 0;
+  // 낸 패 → 더미 뒤집기 사이 최소 간격 0.4초 — 낸 패의 이동이 rect 특이 케이스로
+  // 무버에서 빠져도(hasA=false), 이번 수에 '내기'가 있었다면 뒤집기를 바로 붙이지 않는다.
+  const playHappened = !choosing && (playMove != null || pendingResolved?.source === 'play');
+  const tB = hasA ? ANIM3.FLY + ANIM3.GAP : playHappened && hasB ? ANIM3.MIN_GAP : 0;
   const tC = tB + (hasB ? ANIM3.FLY + ANIM3.GAP : 0);
   const total = tC + ANIM3.TIDY + 60;
 
@@ -5336,7 +5356,8 @@ function renderSettingsSheet() {
     btn.classList.toggle('off', !on);
   };
   t($('set-labels'), settings.labels);
-  t($('set-sound'), settings.sound);
+  t($('set-sfx'), settings.sfx);
+  t($('set-bgm'), settings.bgm);
   t($('set-vibe'), settings.vibe);
   const fs = $('set-fullscreen');
   if (fs) t(fs, !!(document.fullscreenElement || document.webkitFullscreenElement));
@@ -6035,6 +6056,7 @@ $('btn-flip').addEventListener('click', () => {
 });
 $('shake-yes').addEventListener('click', () => closeShakeAsk(true));
 $('shake-no').addEventListener('click', () => closeShakeAsk(false));
+$('shake-cancel').addEventListener('click', () => { sfx('click'); closeShakeAsk(null); }); // 무르기 — 내지 않고 접는다
 $('btn-go').addEventListener('click', () => {
   match.decide('go');
   render();
@@ -6143,12 +6165,17 @@ $('set-labels').addEventListener('click', () => {
   applyLabels(!settings.labels);
   renderSettingsSheet();
 });
-$('set-sound').addEventListener('click', () => {
-  settings.sound = !settings.sound;
-  store.set('ssg-sound', settings.sound ? '1' : '0');
+$('set-sfx').addEventListener('click', () => {
+  settings.sfx = !settings.sfx;
+  store.set('ssg-sfx', settings.sfx ? '1' : '0');
   renderSettingsSheet();
-  try { applyAmbient(); } catch { /* 미지원 */ } // 끄면 배경음도 함께 멎는다
   sfx('click'); // 켰을 때 확인음
+});
+$('set-bgm').addEventListener('click', () => {
+  settings.bgm = !settings.bgm;
+  store.set('ssg-bgm', settings.bgm ? '1' : '0');
+  renderSettingsSheet();
+  try { loadSfxAssets(); applyAmbient(); } catch { /* 미지원 */ } // 켜면 현재 화면의 배경음이 바로 흐른다
 });
 $('set-vibe').addEventListener('click', () => {
   settings.vibe = !settings.vibe;
