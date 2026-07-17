@@ -1173,6 +1173,53 @@ html { color-scheme: only light; }
   100% { box-shadow: 0 2px 4px rgba(0,0,0,.35); }
 }
 
+/* ---------- 걸개 가챠 — 등급 4단계 (일반<고급<희귀<전설) ---------- */
+:root {
+  --tier-0: #9a8f78; /* 일반 — 삼베 */
+  --tier-1: #6fa8dc; /* 고급 — 청 */
+  --tier-2: #b07fe0; /* 희귀 — 자수정 */
+  --tier-3: #e0b34c; /* 전설 — 금박 */
+}
+.gacha-btns { display: flex; gap: 8px; flex-shrink: 0; }
+.gacha-rates { margin: 4px 0 10px; font-size: 12px; }
+#gacha-result { z-index: 132; } /* 걸개 단장 시트 위 */
+.gacha-cards { display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px; margin: 12px 0 4px; }
+.gacha-cards.single { grid-template-columns: minmax(120px, 170px); justify-content: center; }
+.g-card {
+  aspect-ratio: 3 / 4; border-radius: 8px; position: relative; overflow: hidden;
+  background-size: cover; background-position: center;
+  border: 2px solid var(--tier-0);
+  animation: pulledIn .5s cubic-bezier(.2,1.4,.4,1) both;
+}
+.g-card.t-1 { border-color: var(--tier-1); }
+.g-card.t-2 { border-color: var(--tier-2); box-shadow: 0 0 10px rgba(176,127,224,.5); }
+.g-card.t-3 { border-color: var(--tier-3); box-shadow: 0 0 14px rgba(224,179,76,.65); }
+.g-card .g-name {
+  position: absolute; left: 0; right: 0; bottom: 0; padding: 10px 4px 4px;
+  font-size: 10px; color: #f4edda; text-align: center; line-height: 1.25;
+  background: linear-gradient(180deg, transparent, rgba(10,8,5,.85));
+  display: flex; flex-direction: column; gap: 1px;
+}
+.g-card .g-name b { font-size: 9px; opacity: .9; }
+.g-card.t-1 .g-name b { color: var(--tier-1); }
+.g-card.t-2 .g-name b { color: var(--tier-2); }
+.g-card.t-3 .g-name b { color: var(--tier-3); }
+.g-card .g-tag {
+  position: absolute; top: 4px; right: 4px; z-index: 2;
+  font-size: 9px; font-weight: 700; border-radius: 4px; padding: 2px 5px;
+}
+.g-card .g-tag.new { background: var(--dan-red); color: #fff; }
+.g-card .g-tag.dupe { background: rgba(20,16,9,.75); color: #b7ab8e; }
+/* 걸개 단장 카드의 등급 뱃지 */
+.skin-card .sk-grade {
+  position: absolute; top: 5px; left: 5px; z-index: 2;
+  font-size: 10px; font-weight: 700; padding: 2px 6px; border-radius: 4px;
+  background: rgba(15,12,7,.72); color: var(--tier-0);
+}
+.skin-card .sk-grade.t-1 { color: var(--tier-1); }
+.skin-card .sk-grade.t-2 { color: var(--tier-2); }
+.skin-card .sk-grade.t-3 { color: var(--tier-3); }
+
 </style>
 </head>
 <body>
@@ -1404,6 +1451,15 @@ html { color-scheme: only light; }
   </div>
 </div>
 
+<!-- 걸개 뽑기 결과 -->
+<div id="gacha-result" class="overlay" hidden>
+  <div class="sheet">
+    <h2>걸개 뽑기</h2>
+    <div id="gacha-cards" class="gacha-cards"></div>
+    <div class="btns"><button id="gacha-close" class="primary">확인</button></div>
+  </div>
+</div>
+
 <!-- 노름판을 떠난다 — 유품 하나를 품고 나간다 -->
 <div id="leave" class="overlay" hidden>
   <div class="sheet">
@@ -1424,8 +1480,12 @@ html { color-scheme: only light; }
     <p class="note">해금한 일러스트를 눌러 홈 배경 걸개에 올리거나 내린다.<br />관문을 클리어하면 그 딜러의 일러스트가 해금된다.</p>
     <div class="gacha-row">
       <span>명전 <b id="myeongjeon-balance">0</b>장 <span class="hint-inline">— 런이 끝나면 남은 엽전이 명전이 된다</span></span>
-      <button id="btn-gacha" class="primary">뽑기 (30명전)</button>
+      <div class="gacha-btns">
+        <button id="btn-gacha" class="primary">1뽑 (30)</button>
+        <button id="btn-gacha10" class="primary">10뽑 (300)</button>
+      </div>
     </div>
+    <p class="note gacha-rates">확률 — 일반 55% · 고급 30% · 희귀 12% · 전설 3% · <b>10뽑은 희귀 이상 1장 확정</b> · 중복 가능</p>
     <div id="skin-grid" class="skin-grid"></div>
     <div class="btns"><button id="skins-close" class="primary">닫기</button></div>
   </div>
@@ -2509,20 +2569,22 @@ const DEALERS = Object.freeze([
     ai: { stopAt: 5, maxGo: 1 },
   },
   {
+    // 중간보스(구미호) 직후 — 판돈 스파이크로 불어난 주머니를 능구렁이(피 압박)로 견제
     name: '저승사자',
     gimmick: '서두르는 낫 — 6점만 되면 곧장 거둔다',
     dialog: '시간이 없다. 명부에 이름을 적기 전에 끝내지.',
     mutators: [],
-    charms: ['tajja_nun'],
+    charms: ['tajja_nun', 'neunggureongi'],
     ai: { stopAt: 6, maxGo: 1 },
   },
   {
+    // 관문 4에 이어 부자 노름꾼 견제 구간 — 피·띠 선점 둘 다 물고 시작한다
     name: '달걀귀신',
-    gimmick: '민낯 — 시작부터 피 한 장을 품고 있다',
+    gimmick: '민낯 — 시작부터 피와 띠를 품고 있다',
     dialog: '…… (얼굴 없는 낯이 패만 물끄러미 내려다본다)',
     mutators: [],
-    charms: ['bisanggeum'],
-    ai: { stopAt: 10, maxGo: 2 },
+    charms: ['bisanggeum', 'bamsonnim'],
+    ai: { stopAt: 8, maxGo: 2 },
   },
   {
     name: '장승',
@@ -2533,12 +2595,13 @@ const DEALERS = Object.freeze([
     ai: { stopAt: 8, maxGo: 2 },
   },
   {
+    // 장승(판돈 125) 직후 최강 일반 관문 — 부적 4장 + 최저 stopAt(가장 강한 노브)
     name: '어둑시니',
     gimmick: '어둑발 — 어둠 속에서 네 피를 걷어간다',
     dialog: '어둠 속에선 네 패가 훤히 보인다. 숨겨봐야 소용없어.',
     mutators: [],
-    charms: ['sui_jarak', 'samjae', 'kkachibal'],
-    ai: { stopAt: 6, maxGo: 1 },
+    charms: ['sui_jarak', 'samjae', 'kkachibal', 'yeokmasal'],
+    ai: { stopAt: 5, maxGo: 1 },
   },
   {
     name: '염라대왕',
@@ -3014,8 +3077,10 @@ function simulate({
 // ============================================================
 
 
-/** 딜러 판돈 곡선 (GDD §5.5 — v4: 관문마다 딜러가 깔고 앉은 엽전) */
-const GATE_TARGETS = Object.freeze([20, 28, 38, 50, 66, 86, 112, 146]);
+/** 딜러 판돈 곡선 (GDD §5.5 — v4: 관문마다 딜러가 깔고 앉은 엽전).
+ *  관문 3·6(중간보스)·8(최종)은 판돈 스파이크 — 털면 그만큼 군자금이 붇는 대신,
+ *  직후 일반 관문(4·5·7)은 부적·AI가 강해 "돈만 믿고 버티기"를 견제한다 (GDD §6.5). */
+const GATE_TARGETS = Object.freeze([20, 28, 55, 50, 66, 125, 112, 220]);
 
 /** 런 규칙 노브 — 전부 시뮬 튜닝 대상 (GDD §6~7) */
 const RUN_DEFAULTS = Object.freeze({
@@ -3787,22 +3852,30 @@ const animV2 = makeAnimV2({ $, sfx, buzz, reduced: REDUCED_MOTION });
 // ---------- 스킨/일러스트 — 해금과 홈 배경 걸개 ----------
 // 처음엔 노름꾼(플레이어)만 열려 있고, 관문을 클리어하면 그 딜러 일러스트가 해금된다.
 // _01 일러스트 = 기본 아트(초상·소개·걸개), _02·_03 변형 = 명전 뽑기 전용 걸개.
+// 등급 4단계: 일반 < 고급 < 희귀 < 전설 — 관문 깊이로 기본 등급, 변형은 한 단계씩 상향.
+const SKIN_TIERS = ['일반', '고급', '희귀', '전설'];
+const tierOf = (grade) => SKIN_TIERS.indexOf(grade);
+const baseGradeOf = (gate) => (gate >= 8 ? '전설' : gate >= 6 ? '희귀' : gate >= 3 ? '고급' : '일반');
 const HANJA_SUFFIX = ['', '', ' 二', ' 三', ' 四'];
 const variantSkins = Object.keys(SKIN_ART_ASSETS)
   .map((id) => id.match(/^(player|dealer-(\d+))-(\d+)$/))
   .filter(Boolean)
   .map((m) => {
     const base = m[2] ? DEALERS[Number(m[2]) - 1]?.name ?? '딜러' : '노름꾼';
+    const baseTier = tierOf(baseGradeOf(m[2] ? Number(m[2]) : 0));
+    const variantN = Number(m[3]);
     return {
-      id: m[0], name: `${base}${HANJA_SUFFIX[Number(m[3])] ?? ` ${m[3]}`}`,
-      glyph: base.charAt(0), hue: (Number(m[3]) * 53 + 200) % 360,
+      id: m[0], name: `${base}${HANJA_SUFFIX[variantN] ?? ` ${variantN}`}`,
+      glyph: base.charAt(0), hue: (variantN * 53 + 200) % 360,
+      grade: SKIN_TIERS[Math.min(SKIN_TIERS.length - 1, baseTier + variantN - 1)],
       unlockGate: null, // 뽑기 전용 — 관문 해금 없음
     };
   });
 const SKINS = [
-  { id: 'player', name: '노름꾼', glyph: '나', hue: 145, unlockGate: 0 },
+  { id: 'player', name: '노름꾼', glyph: '나', hue: 145, grade: '일반', unlockGate: 0 },
   ...DEALERS.map((d, i) => ({
-    id: `dealer-${i + 1}`, name: d.name, glyph: d.name.charAt(0), hue: (i * 37 + 8) % 360, unlockGate: i + 1,
+    id: `dealer-${i + 1}`, name: d.name, glyph: d.name.charAt(0), hue: (i * 37 + 8) % 360,
+    grade: baseGradeOf(i + 1), unlockGate: i + 1,
   })),
   ...variantSkins,
 ];
@@ -3853,6 +3926,10 @@ function renderSkins() {
     name.className = 'sk-name';
     name.textContent = s.name;
     b.appendChild(name);
+    const badge = document.createElement('span');
+    badge.className = `sk-grade t-${tierOf(s.grade)}`;
+    badge.textContent = s.grade;
+    b.appendChild(badge);
     if (!unlocked.has(s.id)) {
       b.classList.add('locked');
       const lock = document.createElement('span');
@@ -4817,20 +4894,42 @@ function renderCodex() {
 }
 
 // ---------- 명전 — 런이 끝나면 남은 엽전이 저승 지갑에 쌓인다 (걸개 뽑기 재화) ----------
-const GACHA_COST = 30;
+const GACHA_COST = 30;    // 1뽑
+const GACHA_COST_10 = 300; // 10연뽑 — 희귀 이상 1장 확정
 let myeongjeon = Number(store.get('ssg-myeongjeon', '0')) || 0;
 function addMyeongjeon(n) {
   myeongjeon = Math.max(0, myeongjeon + n);
   store.set('ssg-myeongjeon', String(myeongjeon));
 }
 
-function gachaPull() {
-  const locked = SKINS.filter((s) => !unlocked.has(s.id));
-  if (myeongjeon < GACHA_COST || locked.length === 0) return null;
-  addMyeongjeon(-GACHA_COST);
-  const pick = locked[(Math.random() * locked.length) | 0];
-  unlockSkin(pick.id);
-  return pick;
+// 등급별 확률 — 기존 가챠 관례 (최고 등급 3%, 10연 시 희귀 이상 확정). 중복 허용.
+const GACHA_RATES = [0.55, 0.30, 0.12, 0.03]; // 일반/고급/희귀/전설
+function rollTier() {
+  const r = Math.random();
+  let acc = 0;
+  for (let i = 0; i < GACHA_RATES.length; i++) {
+    acc += GACHA_RATES[i];
+    if (r < acc) return i;
+  }
+  return 0;
+}
+function pullOfTier(tier) {
+  const pool = SKINS.filter((sk) => tierOf(sk.grade) === tier);
+  const skin = pool[(Math.random() * pool.length) | 0];
+  const isNew = !unlocked.has(skin.id);
+  if (isNew) unlockSkin(skin.id);
+  return { skin, isNew };
+}
+function gachaPull(count) {
+  const cost = count >= 10 ? GACHA_COST_10 : GACHA_COST;
+  if (myeongjeon < cost) return null;
+  addMyeongjeon(-cost);
+  const results = Array.from({ length: count }, () => pullOfTier(rollTier()));
+  // 10연 확정 — 희귀 이상이 한 장도 없으면 마지막 장을 희귀로 승격
+  if (count >= 10 && !results.some((r) => tierOf(r.skin.grade) >= 2)) {
+    results[results.length - 1] = pullOfTier(2);
+  }
+  return results;
 }
 
 // ---------- 노름판을 떠난다 — 부적 하나를 유품으로 품고 나간다 ----------
@@ -5588,27 +5687,48 @@ $('btn-home-codex').addEventListener('click', () => {
 });
 $('codex-close').addEventListener('click', () => $('codex').hidden = true);
 
-// 걸개 뽑기 (명전 가챠)
+// 걸개 뽑기 (명전 가챠 — 4등급 확률·10연 희귀 확정·중복 허용)
 function renderGacha() {
   $('myeongjeon-balance').textContent = myeongjeon;
-  const locked = SKINS.filter((s) => !unlocked.has(s.id));
-  const btn = $('btn-gacha');
-  btn.disabled = myeongjeon < GACHA_COST || locked.length === 0;
-  btn.textContent = locked.length === 0 ? '다 모았다' : `뽑기 (${GACHA_COST}명전)`;
+  $('btn-gacha').disabled = myeongjeon < GACHA_COST;
+  $('btn-gacha10').disabled = myeongjeon < GACHA_COST_10;
+}
+function showGachaResults(results) {
+  const box = $('gacha-cards');
+  box.classList.toggle('single', results.length === 1);
+  box.innerHTML = '';
+  results.forEach(({ skin, isNew }, i) => {
+    const d = document.createElement('div');
+    d.className = `g-card t-${tierOf(skin.grade)}`;
+    d.style.animationDelay = `${i * 0.08}s`;
+    const art = SKIN_ART[skin.id];
+    d.style.backgroundImage = art ? `url(${art})` : skinBgCss(skin);
+    d.innerHTML =
+      `<span class="g-tag ${isNew ? 'new' : 'dupe'}">${isNew ? 'NEW' : '중복'}</span>` +
+      `<span class="g-name">${skin.name}<b>${skin.grade}</b></span>`;
+    box.appendChild(d);
+  });
+  $('gacha-result').hidden = false;
 }
 $('btn-gacha').addEventListener('click', () => {
-  const pick = gachaPull();
-  if (!pick) return;
+  const r = gachaPull(1);
+  if (!r) return;
   sfx('win');
   buzz(40);
+  showGachaResults(r);
   renderSkins();
   renderGacha();
-  // 뽑힌 카드에 반짝 효과
-  const card = [...document.querySelectorAll('#skin-grid .skin-card')]
-    .find((el) => el.querySelector('.sk-name')?.textContent === pick.name);
-  card?.classList.add('just-pulled');
-  card?.scrollIntoView({ block: 'nearest' });
 });
+$('btn-gacha10').addEventListener('click', () => {
+  const r = gachaPull(10);
+  if (!r) return;
+  sfx('win');
+  buzz(60);
+  showGachaResults(r);
+  renderSkins();
+  renderGacha();
+});
+$('gacha-close').addEventListener('click', () => { $('gacha-result').hidden = true; });
 
 // 설정 — 홈·대국 공용
 $('btn-settings').addEventListener('click', openSettings);
