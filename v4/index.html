@@ -737,6 +737,8 @@ button.big span { font-size: 12px; opacity: .75; font-weight: 400; }
 .set-row .toggle.off { opacity: .55; }
 body.on-home .set-row.run-only { display: none; } /* 홈에서는 진행 관련 줄 숨김 */
 body:not(.on-home) .set-row.home-only { display: none; } /* 초기화는 홈에서만 */
+/* 빌드 시각 — 설정 하단 작은 표기 (캐시 판별용) */
+.build-stamp { display: block; margin-top: 6px; font-size: 10px; color: #8a8069; text-align: right; }
 /* 음원 출처 — CC BY 표기 의무 (docs/audio-plan.md §3) */
 .credits { margin-top: 8px; font-size: 11px; color: #7a6f57; }
 .credits summary { cursor: pointer; padding: 4px 2px; }
@@ -1562,6 +1564,7 @@ html { color-scheme: only light; }
         그 외 효과음: Freesound CC0 (vmgraw·Sandwichbill·I.fekry·jonopodmore·Vrymaa·Paresh·3bagbrew) · Kenney (kenney.nl, CC0)
       </p>
     </details>
+    <span id="build-stamp" class="build-stamp"></span>
     <div class="btns"><button id="set-close" class="primary">닫기</button></div>
   </div>
 </div>
@@ -1629,6 +1632,7 @@ html { color-scheme: only light; }
     <div class="btns"><button id="codex-close" class="primary">닫기</button></div>
   </div>
 </div>
+<script>window.__BUILD = "2026-07-18 15:08 UTC";</script>
 <script type="module">
 // ===== engine/cards.js =====
 // ============================================================
@@ -5364,6 +5368,8 @@ function renderSettingsSheet() {
 }
 
 function openSettings() {
+  // 빌드 시각 — 번들이 주입(window.__BUILD). 캐시된 옛 버전인지 판별용
+  if (window.__BUILD) $('build-stamp').textContent = `빌드 ${window.__BUILD}`;
   renderSettingsSheet();
   const rst = $('set-reset');
   rst.classList.remove('confirm');
