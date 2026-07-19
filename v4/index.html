@@ -1957,7 +1957,7 @@ html { color-scheme: only light; }
     <div class="btns"><button id="codex-close" class="primary">닫기</button></div>
   </div>
 </div>
-<script>window.__BUILD = "2026-07-19 14:45 UTC";</script>
+<script>window.__BUILD = "2026-07-19 15:21 UTC";</script>
 <script type="module">
 // ===== engine/cards.js =====
 // ============================================================
@@ -6069,9 +6069,10 @@ function render() {
   }
   renderCaps($('dealer-caps'), v.caps.O);
   fitCaps($('dealer-caps'));
-  // 딜러의 이번 판 정산이 내 판돈을 위협하면 달아오르게
-  const dpHit = Math.floor(dp.total * (rv.losePayRatio ?? 1)); // 개평이면 절반만 맞는다
-  $('dealer-total').classList.toggle('hot', dpHit >= rv.coins - 2 && dpHit > 0);
+  // 딜러의 이번 판 정산이 내 판돈을 위협하면 달아오르게 — 감투/개평/첫뻑까지 실제 정산대로 예측
+  // (도깨비 감투가 남아 있으면 딜러가 이겨도 0냥 — 거짓 "사망 임박" 경고를 띄우지 않는다)
+  const dThreat = run.projectResolve({ total: dp.total, winner: 'O', events: v.events });
+  $('dealer-total').classList.toggle('hot', dThreat.taken > 0 && dThreat.myCoinsAfter <= 2);
 
   // 바닥 — 월 숫자순 정렬, 2행 최대 6칸 왼쪽 정렬 (행1 우선, 짝 겹침은 1칸)
   const floorEl = $('floor');
