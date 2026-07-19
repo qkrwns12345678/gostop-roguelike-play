@@ -1344,33 +1344,139 @@ html { color-scheme: only light; }
 .gacha-btns { display: flex; gap: 8px; flex-shrink: 0; }
 .gacha-rates { margin: 4px 0 10px; font-size: 12px; }
 #gacha-result { z-index: 132; } /* 걸개 단장 시트 위 */
-.gacha-cards { display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px; margin: 12px 0 4px; }
-.gacha-cards.single { grid-template-columns: minmax(120px, 170px); justify-content: center; }
+/* 뽑기 무대 — 어두운 판 위에서 등급 폭발광이 산다 (Claude Design 시안 §3 무대색) */
+#gacha-result .sheet {
+  background: radial-gradient(120% 130% at 50% 20%, #1a140d, #120e08 70%);
+  color: var(--paper-dim);
+  box-shadow: 0 20px 50px rgba(0,0,0,.6), 0 0 0 1px rgba(201,162,74,.18);
+  overflow-x: hidden; /* 폭발광(-32% 돌출)이 좁은 화면에서 가로 스크롤을 만들지 않게 */
+}
+#gacha-result h2 { color: #efe5cf; }
+#gacha-result .note { color: rgba(233,224,200,.55); text-align: center; margin-bottom: 2px; }
+.gacha-cards { display: grid; grid-template-columns: repeat(5, 1fr); gap: 14px 8px; margin: 14px 0 6px; }
+.gacha-cards.single { grid-template-columns: minmax(150px, 190px); justify-content: center; padding: 10px 0 14px; }
+
+/* ---------- 걸개 뽑기 연출 — 봉인 부적지 → 개봉 빛샘 → 등급 폭발 (시안 코드값 그대로) ---------- */
+/* 등장은 전용 키프레임 — pulledIn의 금테 box-shadow는 라운드 없는 셀에서 각지게 보인다 */
+.g-cell { position: relative; animation: gachaCellIn .5s cubic-bezier(.2,1.4,.4,1) both; }
+@keyframes gachaCellIn {
+  0% { opacity: 0; transform: scale(.6) rotate(-8deg); }
+  60% { opacity: 1; transform: scale(1.08) rotate(2deg); }
+  100% { opacity: 1; transform: scale(1) rotate(0); }
+}
+.g-cell.t-0 { --gc: var(--tier-0); --grgb: 154,143,120; --gburst: .14; --gray: 0;   --gglow: 0 0 15px rgba(154,143,120,.28); }
+.g-cell.t-1 { --gc: var(--tier-1); --grgb: 111,168,220; --gburst: .22; --gray: 0;   --gglow: 0 0 24px rgba(111,168,220,.45); }
+.g-cell.t-2 { --gc: var(--tier-2); --grgb: 176,127,224; --gburst: .34; --gray: .16; --gglow: 0 0 32px rgba(176,127,224,.6), 0 0 64px rgba(176,127,224,.3); }
+.g-cell.t-3 { --gc: var(--tier-3); --grgb: 224,179,76;  --gburst: .48; --gray: .3;  --gglow: 0 0 42px rgba(224,179,76,.72), 0 0 88px rgba(224,179,76,.42); }
+/* 폭발광 + 빛살 — 카드 밖으로 번진다 (개봉 전엔 숨김) */
+.g-halo, .g-rays { position: absolute; left: -32%; right: -32%; top: -26%; bottom: -26%; opacity: 0; pointer-events: none; }
+.g-halo { background: radial-gradient(closest-side, rgba(var(--grgb), var(--gburst)), transparent 72%); }
+.g-rays {
+  background: repeating-conic-gradient(from 0deg at 50% 50%, rgba(var(--grgb), .55) 0deg 3.5deg, transparent 3.5deg 13deg);
+  -webkit-mask-image: radial-gradient(closest-side, #000 12%, transparent 66%);
+  mask-image: radial-gradient(closest-side, #000 12%, transparent 66%);
+}
+.g-cell.open { z-index: 1; }
+.g-cell.open .g-halo { animation: gachaBurst .55s ease-out both; }
+.g-cell.open .g-rays { animation: gachaRays .9s ease-out both; }
+@keyframes gachaBurst { 0% { opacity: 0; transform: scale(.55); } 55% { opacity: 1; } 100% { opacity: 1; transform: scale(1); } }
+@keyframes gachaRays { 0% { opacity: 0; transform: scale(.7) rotate(-14deg); } 100% { opacity: var(--gray); transform: scale(1) rotate(0deg); } }
 .g-card {
   aspect-ratio: 3 / 4; border-radius: 8px; position: relative; overflow: hidden;
-  background-size: cover; background-position: center;
-  border: 2px solid var(--tier-0);
-  animation: pulledIn .5s cubic-bezier(.2,1.4,.4,1) both;
+  background-size: cover; background-position: center; background-color: #171209;
+  border: 2px solid #3d2f1e; /* 봉인 중엔 등급을 흘리지 않는 나무색 */
+  container-type: inline-size;
 }
-.g-card.t-1 { border-color: var(--tier-1); }
-.g-card.t-2 { border-color: var(--tier-2); box-shadow: 0 0 10px rgba(176,127,224,.5); }
-.g-card.t-3 { border-color: var(--tier-3); box-shadow: 0 0 14px rgba(224,179,76,.65); }
+.gacha-cards.single .g-card { border-width: 3px; border-radius: 12px; }
+.g-card.sealed { cursor: pointer; }
+.g-card.sealed:focus-visible { outline: 2px solid var(--gwang-gold); outline-offset: 2px; }
+.g-cell.open .g-card {
+  border-color: var(--gc); box-shadow: var(--gglow);
+  transition: border-color .25s, box-shadow .35s;
+}
 .g-card .g-name {
   position: absolute; left: 0; right: 0; bottom: 0; padding: 10px 4px 4px;
   font-size: 10px; color: #f4edda; text-align: center; line-height: 1.25;
   background: linear-gradient(180deg, transparent, rgba(10,8,5,.85));
   display: flex; flex-direction: column; gap: 1px;
 }
-.g-card .g-name b { font-size: 9px; opacity: .9; }
-.g-card.t-1 .g-name b { color: var(--tier-1); }
-.g-card.t-2 .g-name b { color: var(--tier-2); }
-.g-card.t-3 .g-name b { color: var(--tier-3); }
+.g-card .g-name b { font-size: 9px; opacity: .9; color: var(--gc); }
+.gacha-cards.single .g-name { font-size: 13px; padding: 16px 8px 8px; }
+.gacha-cards.single .g-name b { font-size: 11px; }
 .g-card .g-tag {
   position: absolute; top: 4px; right: 4px; z-index: 2;
   font-size: 9px; font-weight: 700; border-radius: 4px; padding: 2px 5px;
 }
-.g-card .g-tag.new { background: var(--dan-red); color: #fff; }
+.gacha-cards.single .g-tag { font-size: 12px; padding: 4px 10px; border-radius: 6px; top: 9px; right: 9px; }
+.g-card .g-tag.new { background: var(--dan-red); color: #fff; font-weight: 900; letter-spacing: .08em; box-shadow: 0 3px 8px rgba(0,0,0,.4); }
 .g-card .g-tag.dupe { background: rgba(20,16,9,.75); color: #b7ab8e; }
+.g-card.sealed .g-name, .g-card.sealed .g-tag { opacity: 0; }
+.g-card .g-name, .g-card .g-tag { transition: opacity .3s .12s; }
+/* 봉인면 — 족자 봉(위아래) + 부적지(한지·주사 시침선) + 삼끈 X + 封 관인 */
+.g-seal { position: absolute; inset: 0; z-index: 3; background: #171209; }
+.g-seal::before, .g-seal::after {
+  content: ''; position: absolute; left: 2%; right: 2%; height: 5.5%;
+  border-radius: 999px; background: linear-gradient(#3d2f1e, #241a10);
+  box-shadow: 0 2px 3px rgba(0,0,0,.5); z-index: 2;
+}
+.g-seal::before { top: 1.8%; }
+.g-seal::after { bottom: 1.8%; }
+.g-seal .sp {
+  position: absolute; inset: 8% 6%; border-radius: 3px;
+  background-image:
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='90' height='90'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix type='matrix' values='0 0 0 0 0.05 0 0 0 0 0.02 0 0 0 0 0.02 0 0 0 0.13 0'/%3E%3C/filter%3E%3Crect width='90' height='90' filter='url(%23n)'/%3E%3C/svg%3E"),
+    repeating-linear-gradient(180deg, rgba(143,34,26,.4) 0 7px, transparent 7px 13px),
+    repeating-linear-gradient(180deg, rgba(143,34,26,.4) 0 7px, transparent 7px 13px),
+    repeating-linear-gradient(180deg, rgba(143,34,26,.4) 0 7px, transparent 7px 13px),
+    linear-gradient(160deg, #dcc87c, #cbb56a 60%, #b89f52);
+  background-size: 90px 90px, 2px 82%, 2px 82%, 2px 82%, 100% 100%;
+  background-position: 0 0, 28% 9%, 50% 9%, 72% 9%, 0 0;
+  background-repeat: repeat, no-repeat, no-repeat, no-repeat, no-repeat;
+  background-blend-mode: multiply, normal, normal, normal, normal;
+  box-shadow: inset 0 0 0 1px rgba(120,90,30,.35), inset 0 0 18px rgba(120,90,30,.28);
+}
+.g-seal .st {
+  position: absolute; top: 50%; left: -10%; width: 120%; height: 8.5%;
+  transform: translateY(-50%) rotate(18deg);
+  background: linear-gradient(rgba(210,192,150,.2), #b6a678 42%, #8a7d54 62%, rgba(0,0,0,.25));
+  box-shadow: 0 2px 4px rgba(0,0,0,.4);
+}
+.g-seal .st.r { transform: translateY(-50%) rotate(-18deg); }
+.g-seal b {
+  position: absolute; left: 50%; top: 50%; width: 38%; aspect-ratio: 1;
+  transform: translate(-50%, -50%) rotate(-6deg);
+  display: flex; align-items: center; justify-content: center;
+  background: #c8352a; border-radius: 9%;
+  box-shadow: inset 0 0 0 2px #f2e3c8, inset 0 0 0 4px #c8352a;
+  font-family: var(--serif); font-weight: 900; color: #f2e3c8;
+  font-size: 20px; font-size: 19cqw;
+  filter: url(#stamp-rough) drop-shadow(0 3px 5px rgba(0,0,0,.45));
+  transition: opacity .3s, transform .3s;
+}
+/* 개봉 순간 — 우상단 모서리가 들리고 따뜻한 중립 빛이 샌다 (시안 §2) */
+.g-peel {
+  position: absolute; inset: 0; z-index: 4; opacity: 0; pointer-events: none;
+  background: radial-gradient(circle at 84% 12%, rgba(255,250,232,.98), rgba(255,224,158,.6) 26%, transparent 55%);
+}
+.g-peel::after {
+  content: ''; position: absolute; top: 7%; right: 5%; width: 34%; aspect-ratio: 1;
+  background: linear-gradient(135deg, #efe4bb, #cdbd86);
+  clip-path: polygon(100% 0, 0 0, 100% 100%);
+  filter: drop-shadow(-3px 3px 4px rgba(0,0,0,.4));
+}
+.g-card.opening .g-peel { animation: gachaPeel .42s ease-in both; }
+.g-card.opening .g-seal b { opacity: .65; transform: translate(-50%, -46%) rotate(-3deg) scale(.94); }
+@keyframes gachaPeel { 0% { opacity: 0; } 45% { opacity: 1; } 100% { opacity: 1; } }
+.g-cell.open .g-seal { animation: gachaSealOff .3s ease-out both; pointer-events: none; }
+@keyframes gachaSealOff { to { opacity: 0; transform: scale(1.07); } }
+@media (prefers-reduced-motion: reduce) {
+  .g-cell, .g-halo, .g-rays, .g-seal, .g-card.opening .g-peel { animation-duration: .01s !important; animation-delay: 0s !important; }
+}
+/* 좁은 화면: 10연 그리드의 폭발광 돌출을 시트 패딩(14px) 안으로 — 가로 오버플로 0 유지
+   (포커스 이동이 hidden 스크롤러를 밀어 화면이 틀어지는 것 방지. 단일 뽑기는 여유가 커서 시안 비율 유지) */
+@media (max-width: 620px) {
+  .gacha-cards:not(.single) .g-halo, .gacha-cards:not(.single) .g-rays { left: -17%; right: -17%; }
+}
 /* 걸개 단장 카드의 등급 뱃지 */
 .skin-card .sk-grade {
   position: absolute; top: 5px; left: 5px; z-index: 2;
@@ -1694,8 +1800,9 @@ html { color-scheme: only light; }
 <div id="gacha-result" class="overlay" hidden>
   <div class="sheet">
     <h2>걸개 뽑기</h2>
+    <p class="note gacha-hint" id="gacha-hint">봉인된 부적지를 눌러 뜯는다</p>
     <div id="gacha-cards" class="gacha-cards"></div>
-    <div class="btns"><button id="gacha-close" class="primary">확인</button></div>
+    <div class="btns"><button id="gacha-open-all">모두 뜯기</button><button id="gacha-close" class="primary">확인</button></div>
   </div>
 </div>
 
@@ -1753,7 +1860,7 @@ html { color-scheme: only light; }
     <div class="btns"><button id="codex-close" class="primary">닫기</button></div>
   </div>
 </div>
-<script>window.__BUILD = "2026-07-19 09:16 UTC";</script>
+<script>window.__BUILD = "2026-07-19 12:24 UTC";</script>
 <script type="module">
 // ===== engine/cards.js =====
 // ============================================================
@@ -6247,30 +6354,79 @@ function renderGacha() {
   $('btn-gacha').disabled = myeongjeon < GACHA_COST;
   $('btn-gacha10').disabled = myeongjeon < GACHA_COST_10;
 }
+// 개봉 예약 타이머 — 닫기·재뽑기 때 전부 취소해 유령 소리·진동을 남기지 않는다
+let gachaTimers = [];
+function gachaLater(fn, ms) { gachaTimers.push(setTimeout(fn, ms)); }
+function cancelGachaTimers() {
+  for (const t of gachaTimers) clearTimeout(t);
+  gachaTimers = [];
+}
 function showGachaResults(results) {
+  cancelGachaTimers();
   const box = $('gacha-cards');
   box.classList.toggle('single', results.length === 1);
   box.innerHTML = '';
   results.forEach(({ skin, isNew }, i) => {
-    const d = document.createElement('div');
-    d.className = `g-card t-${tierOf(skin.grade)}`;
-    d.style.animationDelay = `${i * 0.08}s`;
-    const art = SKIN_ART[skin.id];
-    d.style.backgroundImage = art ? `url(${art})` : skinBgCss(skin);
-    d.innerHTML =
+    const tier = tierOf(skin.grade);
+    const cell = document.createElement('div');
+    cell.className = `g-cell t-${tier}`;
+    cell.dataset.tier = tier;
+    cell.style.animationDelay = `${i * 0.08}s`;
+    // 봉인 상태로 깔린다 — 등급은 뜯기 전까지 숨김 (테두리·글로우·뱃지 전부)
+    cell.innerHTML =
+      '<i class="g-halo"></i><i class="g-rays"></i>' +
+      '<div class="g-card sealed" tabindex="0" role="button" aria-label="봉인 뜯기">' +
       `<span class="g-tag ${isNew ? 'new' : 'dupe'}">${isNew ? 'NEW' : '중복'}</span>` +
-      `<span class="g-name">${skin.name}<b>${skin.grade}</b></span>`;
-    box.appendChild(d);
+      `<span class="g-name">${skin.name}<b>${skin.grade}</b></span>` +
+      '<div class="g-seal"><i class="sp"></i><i class="st"></i><i class="st r"></i><i class="g-peel"></i><b>封</b></div>' +
+      '</div>';
+    const card = cell.querySelector('.g-card');
+    const art = SKIN_ART[skin.id];
+    card.style.backgroundImage = art ? `url(${art})` : skinBgCss(skin);
+    card.addEventListener('click', () => revealGachaCard(cell));
+    card.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); revealGachaCard(cell); }
+    });
+    box.appendChild(cell);
   });
+  $('gacha-open-all').hidden = results.length === 1;
+  $('gacha-hint').style.visibility = '';
   $('gacha-result').hidden = false;
 }
+// 봉인 개봉 — 모서리가 들리며 빛이 새고(§2), 등급 폭발광과 함께 걸개가 드러난다(§3→§4)
+// quiet: 모두 뜯기 연쇄에서 개별 탭 소리를 생략해 효과음 과밀을 막는다
+function revealGachaCard(cell, quiet = false) {
+  const card = cell.querySelector('.g-card');
+  if (!card.classList.contains('sealed') || card.classList.contains('opening')) return;
+  card.classList.add('opening');
+  if (!quiet) { sfx('card'); buzz(8); }
+  gachaLater(() => {
+    if (!cell.isConnected) return; // 재뽑기로 갈린 구 셀 — 아무것도 하지 않는다
+    card.classList.remove('sealed', 'opening');
+    cell.classList.add('open');
+    card.tabIndex = -1;
+    card.removeAttribute('role');
+    card.removeAttribute('aria-label');
+    const tier = Number(cell.dataset.tier) || 0;
+    sfx('stamp');
+    if (tier >= 2) sfx('coin');
+    buzz(tier === 3 ? 50 : 15);
+    if (!$('gacha-cards').querySelector('.g-card.sealed')) {
+      $('gacha-open-all').hidden = true;
+      $('gacha-hint').style.visibility = 'hidden'; // 다 뜯었다 — 자리는 유지(레이아웃 불변)
+    }
+  }, REDUCED_MOTION ? 40 : 430);
+}
+$('gacha-open-all').addEventListener('click', () => {
+  const sealed = [...$('gacha-cards').querySelectorAll('.g-card.sealed')].map((c) => c.closest('.g-cell'));
+  sealed.forEach((cell, i) => gachaLater(() => revealGachaCard(cell, true), i * (REDUCED_MOTION ? 30 : 200)));
+});
 $('btn-gacha').addEventListener('click', () => {
   const r = gachaPull(1);
   if (!r) return;
   sfx('gacha');
   buzz(40);
   showGachaResults(r);
-  renderSkins();
   renderGacha();
 });
 $('btn-gacha10').addEventListener('click', () => {
@@ -6279,10 +6435,13 @@ $('btn-gacha10').addEventListener('click', () => {
   sfx('gacha');
   buzz(60);
   showGachaResults(r);
-  renderSkins();
   renderGacha();
 });
-$('gacha-close').addEventListener('click', () => { $('gacha-result').hidden = true; });
+$('gacha-close').addEventListener('click', () => {
+  cancelGachaTimers(); // 개봉 중 닫아도 뒤에서 도장 소리·진동이 이어지지 않게
+  $('gacha-result').hidden = true;
+  renderSkins(); // 닫을 때 갱신 — 개봉 전에 뒤 화면 목록으로 NEW가 새는 걸 막는다
+});
 
 // 설정 — 홈·대국 공용
 $('btn-settings').addEventListener('click', openSettings);
