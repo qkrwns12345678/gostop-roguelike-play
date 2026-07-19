@@ -85,12 +85,30 @@ body {
   display: flex;
   align-items: center;
   gap: 12px;
-  background: linear-gradient(180deg, #241d14, #191410);
-  border: 1px solid #4a3c28;
+  /* 옻칠 바탕 + 위아래 금 헤어라인 (Claude Design 시안) */
+  background-color: #191410;
+  background-image:
+    linear-gradient(90deg, transparent, rgba(217,165,60,.35), transparent),
+    linear-gradient(90deg, transparent, rgba(217,165,60,.35), transparent),
+    linear-gradient(180deg, #241d14, #191410);
+  background-repeat: no-repeat;
+  background-size: 100% 1px, 100% 1px, 100% 100%;
+  background-position: 0 6px, 0 calc(100% - 6px), 0 0;
+  border: 2px solid #4a3c28;
   border-radius: 6px;
   padding: 8px 12px;
   height: 88px; overflow: hidden; /* 딜러·나 현판 높이 동일 고정 */
 }
+/* 좌우 당초문 장식 — 내용과 겹칠 수 있어 은은하게 (시안 원본은 .92) */
+.plaque::before, .plaque::after {
+  content: ''; position: absolute; top: 50%; width: 20px; height: calc(100% - 16px);
+  transform: translateY(-50%);
+  background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='40' height='150' viewBox='0 0 40 150'%3E%3Cdefs%3E%3ClinearGradient id='g' x1='0' y1='0' x2='1' y2='0'%3E%3Cstop offset='0' stop-color='%239c7420'/%3E%3Cstop offset='.5' stop-color='%23ecc873'/%3E%3Cstop offset='1' stop-color='%239c7420'/%3E%3C/linearGradient%3E%3C/defs%3E%3Cg fill='none' stroke='url(%23g)' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M22 6 C 9 28 33 46 22 72 C 11 98 33 118 22 144'/%3E%3Cpath d='M22 12 C 32 5 39 11 35 19 C 32 25 24 23 26 17'/%3E%3Cpath d='M23 44 C 33 40 37 48 31 54 C 27 57 22 53 25 49'/%3E%3Cpath d='M20 92 C 9 88 5 97 12 103 C 16 106 21 102 18 98'/%3E%3Cpath d='M22 138 C 32 145 39 139 35 131'/%3E%3C/g%3E%3Ccircle cx='22' cy='6' r='1.8' fill='%23ecc873'/%3E%3Ccircle cx='22' cy='144' r='1.8' fill='%23ecc873'/%3E%3C/svg%3E") center / contain no-repeat;
+  opacity: .5; pointer-events: none;
+}
+.plaque::before { left: 5px; }
+.plaque::after { right: 5px; transform: translateY(-50%) scaleX(-1); }
+.plaque > * { position: relative; z-index: 1; } /* 장식보다 내용이 항상 위 */
 
 /* 딜러가 생각 중 — 딜러 현판 중앙 위쪽 배지 (바닥을 가리지 않는다) */
 #dealer-thinking {
@@ -147,11 +165,13 @@ body {
   width: 22px; height: 32px; border-radius: 3px;
   border: 1px solid #4e1109;
   background-color: #7a1c13;
+  /* 뒷면 종합 아트(.card.back과 동일 SVG)를 축소 — 이 크기에선 한지 노이즈 생략 */
   background-image:
-    radial-gradient(ellipse 90% 70% at 50% 32%, rgba(255,190,150,0.22), transparent 62%),
-    repeating-linear-gradient(45deg, rgba(255,255,255,0.08) 0 1px, transparent 1px 4px),
-    repeating-linear-gradient(-45deg, rgba(0,0,0,0.14) 0 1px, transparent 1px 4px);
-  box-shadow: inset 0 0 0 1px rgba(255,214,170,0.14), 0 1px 3px rgba(0,0,0,.45);
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 260 390'%3E%3Cdefs%3E%3ClinearGradient id='g' x1='0' y1='0' x2='0' y2='1'%3E%3Cstop offset='0' stop-color='%23f4dc8e'/%3E%3Cstop offset='.55' stop-color='%23d9a53c'/%3E%3Cstop offset='1' stop-color='%239c7420'/%3E%3C/linearGradient%3E%3Cpattern id='p' width='44' height='44' patternUnits='userSpaceOnUse'%3E%3Cg fill='none' stroke='%23d9a53c' stroke-width='1.5' stroke-linecap='round' opacity='.55'%3E%3Cpath d='M0 22 C 8 13 14 13 22 22 C 30 31 36 31 44 22'/%3E%3Cpath d='M22 0 C 13 8 13 14 22 22 C 31 30 31 36 22 44'/%3E%3C/g%3E%3Ccircle cx='22' cy='22' r='1.5' fill='%23d9a53c' opacity='.6'/%3E%3Ccircle cx='0' cy='0' r='1.2' fill='%23d9a53c' opacity='.4'/%3E%3Ccircle cx='44' cy='44' r='1.2' fill='%23d9a53c' opacity='.4'/%3E%3Ccircle cx='0' cy='44' r='1.2' fill='%23d9a53c' opacity='.4'/%3E%3Ccircle cx='44' cy='0' r='1.2' fill='%23d9a53c' opacity='.4'/%3E%3C/pattern%3E%3Cg id='c' fill='none' stroke='%23d9a53c' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M8 8 L8 30 C 8 41 17 47 28 47'/%3E%3Cpath d='M8 8 L30 8 C 41 8 47 17 47 28'/%3E%3Cpath d='M24 24 C 35 24 35 39 24 39 C 16 39 14 30 21 27'/%3E%3Ccircle cx='24.5' cy='32.5' r='1.9' fill='%23d9a53c' stroke='none'/%3E%3C/g%3E%3Cfilter id='ds' x='-30%25' y='-30%25' width='160%25' height='160%25'%3E%3CfeDropShadow dx='0' dy='3' stdDeviation='3' flood-color='%23000' flood-opacity='.4'/%3E%3C/filter%3E%3C/defs%3E%3Crect width='260' height='390' fill='url(%23p)' opacity='.42'/%3E%3Cg opacity='.85'%3E%3Cuse href='%23c' transform='translate(8 8) scale(.7857)'/%3E%3Cuse href='%23c' transform='translate(252 8) scale(-.7857 .7857)'/%3E%3Cuse href='%23c' transform='translate(8 382) scale(.7857 -.7857)'/%3E%3Cuse href='%23c' transform='translate(252 382) scale(-.7857 -.7857)'/%3E%3C/g%3E%3Cg transform='translate(130 195) scale(1.0533)' filter='url(%23ds)'%3E%3Ccircle r='60' fill='none' stroke='url(%23g)' stroke-width='3.4'/%3E%3Ccircle r='50.5' fill='none' stroke='url(%23g)' stroke-width='1.3' opacity='.55'/%3E%3Cpath d='M0 -46 C 22 -18 18 16 0 32 C -18 16 -22 -18 0 -46 Z' fill='url(%23g)'/%3E%3Cpath d='M0 -20 C 10 -6 9 14 0 22 C -9 14 -10 -6 0 -20 Z' fill='%237a1c13'/%3E%3Cpath d='M-19 -2 C -31 -12 -30 -27 -21 -32 C -25 -21 -20 -12 -12 -13 Z' fill='url(%23g)' opacity='.92'/%3E%3Cpath d='M19 -2 C 31 -12 30 -27 21 -32 C 25 -21 20 -12 12 -13 Z' fill='url(%23g)' opacity='.92'/%3E%3Ccircle cx='0' cy='34' r='3.3' fill='url(%23g)'/%3E%3Ccircle cx='-30' cy='26' r='2' fill='url(%23g)' opacity='.8'/%3E%3Ccircle cx='30' cy='26' r='2' fill='url(%23g)' opacity='.8'/%3E%3Ccircle cx='0' cy='-56' r='2.3' fill='url(%23g)' opacity='.85'/%3E%3C/g%3E%3C/svg%3E"),
+    radial-gradient(115% 80% at 28% 18%, #8f2619, transparent 55%),
+    radial-gradient(110% 95% at 78% 84%, #5f130e, transparent 62%);
+  background-size: 100% 100%, 100% 100%, 100% 100%;
+  box-shadow: inset 0 0 0 1px rgba(217,165,60,0.22), 0 1px 3px rgba(0,0,0,.45);
 }
 .backs .back-mini + .back-mini { margin-left: -9px; }
 button {
@@ -195,12 +215,15 @@ button:focus-visible { outline: 2px solid var(--gwang-gold); outline-offset: 2px
   min-height: calc(var(--card-h) * 2 + 100px);
   border: 2px solid var(--felt-line);
   border-radius: 12px;
-  /* 깔아 놓은 담요 한 폭 — 살짝 밝은 결 + 가장자리 그늘로 도톰하게 */
-  background-color: rgba(70, 88, 52, 0.28);
+  /* 깔아 놓은 담요 한 폭 — 모직 노이즈 + 씨실·날실·능직 짜임 (Claude Design 시안) */
+  background-color: #3a4a2c;
   background-image:
-    radial-gradient(ellipse 120% 90% at 50% 40%, rgba(255,255,255,0.05), transparent 70%),
-    repeating-linear-gradient(48deg, rgba(255,255,255,0.022) 0 1px, transparent 1px 5px),
-    repeating-linear-gradient(-48deg, rgba(0,0,0,0.06) 0 1px, transparent 1px 5px);
+    radial-gradient(ellipse 120% 90% at 50% 40%, rgba(255,255,255,0.04), transparent 70%),
+    repeating-linear-gradient(90deg, rgba(44,58,32,0.55) 0 1px, transparent 1px 3px),
+    repeating-linear-gradient(0deg, rgba(70,88,58,0.4) 0 1px, transparent 1px 3px),
+    repeating-linear-gradient(45deg, rgba(70,88,58,0.13) 0 2px, transparent 2px 5px),
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix type='matrix' values='0 0 0 0 0.16 0 0 0 0 0.21 0 0 0 0 0.12 0 0 0 0.45 0'/%3E%3C/filter%3E%3Crect width='140' height='140' filter='url(%23n)'/%3E%3C/svg%3E");
+  background-size: auto, auto, auto, auto, 140px 140px;
   box-shadow:
     inset 0 0 0 1px rgba(0,0,0,0.25),
     inset 0 0 26px rgba(0,0,0,0.35),
@@ -264,17 +287,20 @@ button:focus-visible { outline: 2px solid var(--gwang-gold); outline-offset: 2px
   text-shadow: 0 1px 3px rgba(0,0,0,.9), 0 0 10px rgba(0,0,0,.7);
   pointer-events: none; z-index: 4;
 }
-/* 더미에서 뽑은 카드가 뒷면 → 앞면으로 뒤집히는 연출 (앞면 위에 덮인 뒷면이 열린다) */
+/* 더미에서 뽑은 카드가 뒷면 → 앞면으로 뒤집히는 연출 (앞면 위에 덮인 뒷면이 열린다)
+   — 배경 스택은 .card.back과 자구 동일해야 한다 (다르면 뒤집기마다 다른 뒷면이 떠 보인다) */
 .deck-reveal {
-  position: absolute; inset: 0; z-index: 5; border-radius: 6px;
-  border: 1px solid #4e1109;
+  position: absolute; inset: -1px; z-index: 5; border-radius: 6px; /* 아래 앞면 카드의 1px 테두리까지 덮는다 */
+  border: 2px solid #4e1109;
   background-color: #7a1c13;
   background-image:
-    radial-gradient(ellipse 90% 70% at 50% 32%, rgba(255,190,150,0.22), transparent 60%),
-    radial-gradient(circle at 50% 50%, rgba(255,214,170,0.16) 0 5px, rgba(255,214,170,0.05) 6px 12px, transparent 13px),
-    repeating-linear-gradient(45deg, rgba(255,255,255,0.07) 0 1px, transparent 1px 5px),
-    repeating-linear-gradient(-45deg, rgba(0,0,0,0.13) 0 1px, transparent 1px 5px);
-  box-shadow: inset 0 0 0 2px rgba(255,214,170,0.14), inset 0 0 0 3px rgba(0,0,0,0.30);
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 260 390'%3E%3Cdefs%3E%3ClinearGradient id='g' x1='0' y1='0' x2='0' y2='1'%3E%3Cstop offset='0' stop-color='%23f4dc8e'/%3E%3Cstop offset='.55' stop-color='%23d9a53c'/%3E%3Cstop offset='1' stop-color='%239c7420'/%3E%3C/linearGradient%3E%3Cpattern id='p' width='44' height='44' patternUnits='userSpaceOnUse'%3E%3Cg fill='none' stroke='%23d9a53c' stroke-width='1.5' stroke-linecap='round' opacity='.55'%3E%3Cpath d='M0 22 C 8 13 14 13 22 22 C 30 31 36 31 44 22'/%3E%3Cpath d='M22 0 C 13 8 13 14 22 22 C 31 30 31 36 22 44'/%3E%3C/g%3E%3Ccircle cx='22' cy='22' r='1.5' fill='%23d9a53c' opacity='.6'/%3E%3Ccircle cx='0' cy='0' r='1.2' fill='%23d9a53c' opacity='.4'/%3E%3Ccircle cx='44' cy='44' r='1.2' fill='%23d9a53c' opacity='.4'/%3E%3Ccircle cx='0' cy='44' r='1.2' fill='%23d9a53c' opacity='.4'/%3E%3Ccircle cx='44' cy='0' r='1.2' fill='%23d9a53c' opacity='.4'/%3E%3C/pattern%3E%3Cg id='c' fill='none' stroke='%23d9a53c' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M8 8 L8 30 C 8 41 17 47 28 47'/%3E%3Cpath d='M8 8 L30 8 C 41 8 47 17 47 28'/%3E%3Cpath d='M24 24 C 35 24 35 39 24 39 C 16 39 14 30 21 27'/%3E%3Ccircle cx='24.5' cy='32.5' r='1.9' fill='%23d9a53c' stroke='none'/%3E%3C/g%3E%3Cfilter id='ds' x='-30%25' y='-30%25' width='160%25' height='160%25'%3E%3CfeDropShadow dx='0' dy='3' stdDeviation='3' flood-color='%23000' flood-opacity='.4'/%3E%3C/filter%3E%3C/defs%3E%3Crect width='260' height='390' fill='url(%23p)' opacity='.42'/%3E%3Cg opacity='.85'%3E%3Cuse href='%23c' transform='translate(8 8) scale(.7857)'/%3E%3Cuse href='%23c' transform='translate(252 8) scale(-.7857 .7857)'/%3E%3Cuse href='%23c' transform='translate(8 382) scale(.7857 -.7857)'/%3E%3Cuse href='%23c' transform='translate(252 382) scale(-.7857 -.7857)'/%3E%3C/g%3E%3Cg transform='translate(130 195) scale(1.0533)' filter='url(%23ds)'%3E%3Ccircle r='60' fill='none' stroke='url(%23g)' stroke-width='3.4'/%3E%3Ccircle r='50.5' fill='none' stroke='url(%23g)' stroke-width='1.3' opacity='.55'/%3E%3Cpath d='M0 -46 C 22 -18 18 16 0 32 C -18 16 -22 -18 0 -46 Z' fill='url(%23g)'/%3E%3Cpath d='M0 -20 C 10 -6 9 14 0 22 C -9 14 -10 -6 0 -20 Z' fill='%237a1c13'/%3E%3Cpath d='M-19 -2 C -31 -12 -30 -27 -21 -32 C -25 -21 -20 -12 -12 -13 Z' fill='url(%23g)' opacity='.92'/%3E%3Cpath d='M19 -2 C 31 -12 30 -27 21 -32 C 25 -21 20 -12 12 -13 Z' fill='url(%23g)' opacity='.92'/%3E%3Ccircle cx='0' cy='34' r='3.3' fill='url(%23g)'/%3E%3Ccircle cx='-30' cy='26' r='2' fill='url(%23g)' opacity='.8'/%3E%3Ccircle cx='30' cy='26' r='2' fill='url(%23g)' opacity='.8'/%3E%3Ccircle cx='0' cy='-56' r='2.3' fill='url(%23g)' opacity='.85'/%3E%3C/g%3E%3C/svg%3E"),
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='90' height='90'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix type='matrix' values='0 0 0 0 0.05 0 0 0 0 0.02 0 0 0 0 0.02 0 0 0 0.18 0'/%3E%3C/filter%3E%3Crect width='90' height='90' filter='url(%23n)'/%3E%3C/svg%3E"),
+    radial-gradient(115% 80% at 28% 18%, #8f2619, transparent 55%),
+    radial-gradient(110% 95% at 78% 84%, #5f130e, transparent 62%);
+  background-size: 100% 100%, 90px 90px, 100% 100%, 100% 100%;
+  background-blend-mode: normal, multiply, normal, normal;
+  box-shadow: inset 0 0 0 1px rgba(217,165,60,0.30), inset 0 0 10px rgba(0,0,0,0.25);
   transform-origin: center;
   animation: deckReveal .3s ease-in forwards;
 }
@@ -346,20 +372,20 @@ button:focus-visible { outline: 2px solid var(--gwang-gold); outline-offset: 2px
   padding: 3px 6px; border-radius: 3px;
 }
 /* 뒷면 */
-/* 화투 뒷면 — 짙은 홍색 옻칠 + 방사 광택 + 촘촘한 능직 + 이중 테두리 액자 */
+/* 화투 뒷면 — 옻칠 홍색 + 도깨비불 금박 엠블럼·비늘 문양·모서리 당초 (Claude Design 시안, 260×390 원본 비례) */
 .card.back {
   background-color: #7a1c13;
   background-image:
-    radial-gradient(ellipse 90% 70% at 50% 32%, rgba(255,190,150,0.22), transparent 60%),
-    radial-gradient(circle at 50% 50%, rgba(255,214,170,0.16) 0 5px, rgba(255,214,170,0.05) 6px 12px, transparent 13px),
-    repeating-linear-gradient(45deg, rgba(255,255,255,0.07) 0 1px, transparent 1px 5px),
-    repeating-linear-gradient(-45deg, rgba(0,0,0,0.13) 0 1px, transparent 1px 5px),
-    radial-gradient(ellipse 100% 100% at 50% 108%, rgba(0,0,0,0.42), transparent 55%);
-  border-color: #4e1109;
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 260 390'%3E%3Cdefs%3E%3ClinearGradient id='g' x1='0' y1='0' x2='0' y2='1'%3E%3Cstop offset='0' stop-color='%23f4dc8e'/%3E%3Cstop offset='.55' stop-color='%23d9a53c'/%3E%3Cstop offset='1' stop-color='%239c7420'/%3E%3C/linearGradient%3E%3Cpattern id='p' width='44' height='44' patternUnits='userSpaceOnUse'%3E%3Cg fill='none' stroke='%23d9a53c' stroke-width='1.5' stroke-linecap='round' opacity='.55'%3E%3Cpath d='M0 22 C 8 13 14 13 22 22 C 30 31 36 31 44 22'/%3E%3Cpath d='M22 0 C 13 8 13 14 22 22 C 31 30 31 36 22 44'/%3E%3C/g%3E%3Ccircle cx='22' cy='22' r='1.5' fill='%23d9a53c' opacity='.6'/%3E%3Ccircle cx='0' cy='0' r='1.2' fill='%23d9a53c' opacity='.4'/%3E%3Ccircle cx='44' cy='44' r='1.2' fill='%23d9a53c' opacity='.4'/%3E%3Ccircle cx='0' cy='44' r='1.2' fill='%23d9a53c' opacity='.4'/%3E%3Ccircle cx='44' cy='0' r='1.2' fill='%23d9a53c' opacity='.4'/%3E%3C/pattern%3E%3Cg id='c' fill='none' stroke='%23d9a53c' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M8 8 L8 30 C 8 41 17 47 28 47'/%3E%3Cpath d='M8 8 L30 8 C 41 8 47 17 47 28'/%3E%3Cpath d='M24 24 C 35 24 35 39 24 39 C 16 39 14 30 21 27'/%3E%3Ccircle cx='24.5' cy='32.5' r='1.9' fill='%23d9a53c' stroke='none'/%3E%3C/g%3E%3Cfilter id='ds' x='-30%25' y='-30%25' width='160%25' height='160%25'%3E%3CfeDropShadow dx='0' dy='3' stdDeviation='3' flood-color='%23000' flood-opacity='.4'/%3E%3C/filter%3E%3C/defs%3E%3Crect width='260' height='390' fill='url(%23p)' opacity='.42'/%3E%3Cg opacity='.85'%3E%3Cuse href='%23c' transform='translate(8 8) scale(.7857)'/%3E%3Cuse href='%23c' transform='translate(252 8) scale(-.7857 .7857)'/%3E%3Cuse href='%23c' transform='translate(8 382) scale(.7857 -.7857)'/%3E%3Cuse href='%23c' transform='translate(252 382) scale(-.7857 -.7857)'/%3E%3C/g%3E%3Cg transform='translate(130 195) scale(1.0533)' filter='url(%23ds)'%3E%3Ccircle r='60' fill='none' stroke='url(%23g)' stroke-width='3.4'/%3E%3Ccircle r='50.5' fill='none' stroke='url(%23g)' stroke-width='1.3' opacity='.55'/%3E%3Cpath d='M0 -46 C 22 -18 18 16 0 32 C -18 16 -22 -18 0 -46 Z' fill='url(%23g)'/%3E%3Cpath d='M0 -20 C 10 -6 9 14 0 22 C -9 14 -10 -6 0 -20 Z' fill='%237a1c13'/%3E%3Cpath d='M-19 -2 C -31 -12 -30 -27 -21 -32 C -25 -21 -20 -12 -12 -13 Z' fill='url(%23g)' opacity='.92'/%3E%3Cpath d='M19 -2 C 31 -12 30 -27 21 -32 C 25 -21 20 -12 12 -13 Z' fill='url(%23g)' opacity='.92'/%3E%3Ccircle cx='0' cy='34' r='3.3' fill='url(%23g)'/%3E%3Ccircle cx='-30' cy='26' r='2' fill='url(%23g)' opacity='.8'/%3E%3Ccircle cx='30' cy='26' r='2' fill='url(%23g)' opacity='.8'/%3E%3Ccircle cx='0' cy='-56' r='2.3' fill='url(%23g)' opacity='.85'/%3E%3C/g%3E%3C/svg%3E"),
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='90' height='90'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix type='matrix' values='0 0 0 0 0.05 0 0 0 0 0.02 0 0 0 0 0.02 0 0 0 0.18 0'/%3E%3C/filter%3E%3Crect width='90' height='90' filter='url(%23n)'/%3E%3C/svg%3E"),
+    radial-gradient(115% 80% at 28% 18%, #8f2619, transparent 55%),
+    radial-gradient(110% 95% at 78% 84%, #5f130e, transparent 62%);
+  background-size: 100% 100%, 90px 90px, 100% 100%, 100% 100%;
+  background-blend-mode: normal, multiply, normal, normal;
+  border: 2px solid #4e1109;
   box-shadow:
-    inset 0 0 0 2px rgba(255,214,170,0.14),
-    inset 0 0 0 3px rgba(0,0,0,0.30),
-    inset 0 0 12px rgba(0,0,0,0.28),
+    inset 0 0 0 1px rgba(217,165,60,0.30),
+    inset 0 0 10px rgba(0,0,0,0.25),
     0 2px 5px rgba(0,0,0,0.4);
 }
 .card.small { --card-w: 40px; --card-h: 58px; width: 40px; height: 58px; }
@@ -405,7 +431,8 @@ button:focus-visible { outline: 2px solid var(--gwang-gold); outline-offset: 2px
   border-color: var(--gwang-gold);
 }
 .card.dragging { opacity: .45; }
-#table.drop-hover { border-color: var(--gwang-gold); background: rgba(217,165,60,.06); }
+/* background 축약형 금지 — 담요 질감 레이어가 날아간다. 밝은 색조만 얹는다 */
+#table.drop-hover { border-color: var(--gwang-gold); background-color: #46572f; }
 
 /* 선택 무더기의 무르기 버튼 — 벌어진 두 장 아래에 */
 .pile.choosing .btn-undo {
@@ -546,14 +573,21 @@ button:focus-visible { outline: 2px solid var(--gwang-gold); outline-offset: 2px
   position: fixed; inset: 0; display: flex; align-items: center; justify-content: center;
   pointer-events: none; z-index: 60;
 }
+/* 관인풍 — 이중 붉은 선 틀 + 한지 바탕 + 거친 날인 가장자리 (Claude Design 시안, 필터는 index.html 인라인 SVG) */
 #stamp span {
-  font-family: var(--serif); font-size: 64px; font-weight: 800; letter-spacing: 8px;
-  color: var(--dan-red);
-  border: 5px solid var(--dan-red); border-radius: 10px;
-  padding: 8px 28px; background: rgba(246,239,220,0.93);
+  font-family: var(--serif); font-size: 64px; font-weight: 900; letter-spacing: 8px;
+  color: #b02a1f;
+  border: 6px solid var(--dan-red); border-radius: 9px;
+  padding: 10px 28px;
+  background:
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='90' height='90'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix type='matrix' values='0 0 0 0 0.05 0 0 0 0 0.02 0 0 0 0 0.02 0 0 0 0.2 0'/%3E%3C/filter%3E%3Crect width='90' height='90' filter='url(%23n)'/%3E%3C/svg%3E") 0 0 / 90px 90px,
+    var(--paper);
+  background-blend-mode: multiply, normal;
   transform: rotate(-7deg) scale(1);
   animation: stampIn .8s cubic-bezier(.2,1.6,.4,1) both;
-  box-shadow: 0 10px 30px rgba(0,0,0,.5);
+  /* 안쪽: 한지 2px + 붉은 선 2px = 이중선 관인 틀. 그림자는 필터 미지원(사파리)에도 남게 box-shadow로 */
+  box-shadow: inset 0 0 0 2px var(--paper), inset 0 0 0 4px var(--dan-red), 0 10px 30px rgba(0,0,0,.5);
+  filter: url(#stamp-rough);
 }
 @keyframes stampIn {
   0% { transform: rotate(-7deg) scale(2.4); opacity: 0; }
@@ -679,11 +713,18 @@ body.no-labels .peek-card.ssang::after {
 }
 #dealer-art span, #my-art span { font-family: var(--serif); font-size: 24px; color: #7a6749; }
 
-/* ---------- 홈 화면 ---------- */
+/* ---------- 홈 화면 — Claude Design 시안 이식 (2026-07) ---------- */
+/* 타이틀 전용 서브셋 폰트 — Noto Serif KR 900에서 "쓰리고!" 4글리프만 (1.7KB, OFL) */
+@font-face {
+  font-family: 'SSG Title';
+  font-weight: 900;
+  font-display: swap;
+  src: url('data:font/woff2;base64,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') format('woff2');
+}
 #home {
   position: fixed; inset: 0; z-index: 30;
-  display: flex; align-items: center; justify-content: center;
   overflow: hidden;
+  background: #14110c;
 }
 #home-bg {
   position: absolute; inset: 0;
@@ -697,34 +738,104 @@ body.no-labels .peek-card.ssang::after {
   color: rgba(246,239,220,.16); user-select: none;
   transform: rotate(-6deg);
 }
-#home-bg::after { /* 아래 글씨가 읽히도록 살짝 어둡게 */
+#home-bg::after { /* 4단계 스크림 — 아래로 갈수록 짙게 (버튼 가독성) */
   content: ''; position: absolute; inset: 0;
-  background: linear-gradient(180deg, rgba(12,10,7,.25), rgba(12,10,7,.55));
+  background: linear-gradient(180deg,
+    rgba(12,10,7,.24) 0%, rgba(12,10,7,.30) 42%,
+    rgba(12,10,7,.46) 74%, rgba(12,10,7,.60) 100%);
 }
+/* 떠다니는 불씨 — 걸개 위 은은한 생기 */
+@keyframes emberFloat { 0%, 100% { transform: translateY(0); opacity: .5; } 50% { transform: translateY(-9px); opacity: .78; } }
+.home-embers { position: absolute; inset: 0; z-index: 1; pointer-events: none; }
+.home-embers i {
+  position: absolute; border-radius: 50%; filter: blur(1px);
+  animation: emberFloat 8s ease-in-out infinite;
+}
+.home-embers i:nth-child(1) { left: 20%; top: 43%; width: 8px; height: 8px; background: radial-gradient(closest-side, #7fbfa2, transparent); opacity: .5; animation-duration: 9s; animation-delay: 1s; }
+.home-embers i:nth-child(2) { left: 73%; top: 50%; width: 7px; height: 7px; background: radial-gradient(closest-side, #e6c06a, transparent); opacity: .45; animation-delay: .5s; }
+.home-embers i:nth-child(3) { left: 38%; top: 26%; width: 6px; height: 6px; background: radial-gradient(closest-side, #e6c06a, transparent); opacity: .4; animation-duration: 10s; animation-delay: 2s; }
+/* 하단 화투 뒷면 부채 — 장식 3장 (중앙 하단, 반쯤 걸침) */
+.home-fan { position: absolute; left: 50%; bottom: -16px; width: 0; height: 0; transform: translateX(-50%); z-index: 2; pointer-events: none; }
+.home-fan i {
+  position: absolute; width: 42px; height: 64px; border-radius: 6px;
+  background: linear-gradient(155deg, #3c1613, #280f0c);
+  border: 1px solid rgba(217,165,60,.32);
+  box-shadow: 0 8px 16px rgba(0,0,0,.5);
+  transform-origin: center bottom;
+}
+.home-fan i::after { content: ''; position: absolute; inset: 5px; border-radius: 3px; border: 1px solid rgba(217,165,60,.18); }
+.home-fan i:nth-child(1) { left: -60px; bottom: 0; transform: rotate(-16deg); }
+.home-fan i:nth-child(2) { left: -21px; bottom: 9px; transform: rotate(-2deg); }
+.home-fan i:nth-child(3) { left: 18px; bottom: 2px; transform: rotate(13deg); }
+/* 콘텐츠 — 하단 정박 (엄지 동선), 부채 위 여백 확보 */
 .home-inner {
-  position: relative; z-index: 2;
-  display: flex; flex-direction: column; align-items: center; gap: 10px;
-  padding: 24px;
+  position: absolute; inset: 0; z-index: 3;
+  display: flex; flex-direction: column; align-items: center; justify-content: flex-end;
+  padding: 0 24px calc(120px + env(safe-area-inset-bottom));
 }
 .home-title {
-  font-family: var(--serif); font-size: 56px; letter-spacing: 6px;
-  color: var(--paper);
+  font-family: 'SSG Title', var(--serif); font-weight: 900;
+  font-size: clamp(44px, 15vw, 57px); line-height: 1; letter-spacing: .06em;
+  color: var(--paper); white-space: nowrap;
   text-shadow:
-    -1px -1px 0 rgba(8,6,3,.85), 1px -1px 0 rgba(8,6,3,.85),
-    -1px 1px 0 rgba(8,6,3,.85), 1px 1px 0 rgba(8,6,3,.85),
-    0 4px 18px rgba(0,0,0,.7);
+    -2px -2px 0 #17110a, 2px -2px 0 #17110a, -2px 2px 0 #17110a, 2px 2px 0 #17110a,
+    -2px 0 0 #17110a, 2px 0 0 #17110a, 0 -2px 0 #17110a, 0 2px 0 #17110a,
+    0 4px 12px rgba(0,0,0,.72);
 }
 .home-title .bang { color: var(--dan-red); }
-.home-sub { font-size: 13px; color: #e6ddc4; margin-bottom: 26px; text-shadow: 0 1px 3px rgba(8,6,3,.9), 0 0 8px rgba(0,0,0,.6); }
-.home-btns { display: flex; flex-direction: column; gap: 12px; width: min(260px, 74vw); }
-button.big { font-size: 16px; padding: 11px 16px; display: flex; flex-direction: column; gap: 2px; align-items: center; }
-button.big b { font-size: 17px; letter-spacing: 1px; }
-button.big span { font-size: 12px; opacity: .75; font-weight: 400; }
-.corner-settings { position: absolute; z-index: 3;
-  top: max(10px, env(safe-area-inset-top)); right: max(10px, env(safe-area-inset-right)); }
+.home-sub {
+  margin-top: 15px; font-size: 14px; font-weight: 500; letter-spacing: .13em;
+  color: #e6ddc4; text-shadow: 0 1px 6px rgba(0,0,0,.75);
+}
+.home-btns { display: flex; flex-direction: column; gap: 12px; width: min(260px, 74vw); margin-top: 32px; }
+/* 주/보조 버튼 — 시안 그라디언트·금박 테두리·이중 그림자 */
+.home-btns button.big {
+  display: flex; flex-direction: column; gap: 3px; align-items: center;
+  padding: 12px 18px 13px; border-radius: 12px;
+  border: 1px solid rgba(217,165,60,.22);
+  background: linear-gradient(180deg, #3a2e20, #33291c 62%, #2a2016);
+  color: #f0e7d0;
+  box-shadow: inset 0 1px 0 rgba(246,239,220,.05), 0 6px 15px rgba(0,0,0,.32);
+  transition: transform .15s, filter .15s, background .15s;
+}
+.home-btns button.big b { font-size: 15.5px; font-weight: 600; letter-spacing: .02em; }
+.home-btns button.big span { font-size: 11.5px; font-weight: 400; opacity: 1; color: #b7ab8e; }
+.home-btns button.big.primary {
+  padding: 13px 18px 14px; border-radius: 13px;
+  border: 1.5px solid #8f221a;
+  background: linear-gradient(180deg, #c8382b, #c23327 60%, #b52d22);
+  color: #fdf4e6;
+  box-shadow: inset 0 1px 0 rgba(255,228,200,.16), 0 8px 20px rgba(120,20,12,.34), 0 2px 5px rgba(0,0,0,.3);
+}
+.home-btns button.big.primary b { font-size: 17px; font-weight: 700; }
+.home-btns button.big.primary span { color: rgba(253,244,230,.82); }
+.home-btns button.big:hover { filter: brightness(1.06); transform: translateY(-1px); }
+.home-btns button.big.primary:hover { background: linear-gradient(180deg, #d64134, #d23b2e 60%, #c33529); }
+/* 설정 — 원형 기어 버튼 (블러 유리) */
+.corner-settings {
+  position: absolute; z-index: 4;
+  top: max(16px, env(safe-area-inset-top)); right: max(16px, env(safe-area-inset-right));
+  width: 42px; height: 42px; border-radius: 50%; padding: 0;
+  display: flex; align-items: center; justify-content: center;
+  background: rgba(26,21,14,.5);
+  border: 1px solid rgba(246,239,220,.18);
+  box-shadow: 0 4px 12px rgba(0,0,0,.4);
+  backdrop-filter: blur(4px); -webkit-backdrop-filter: blur(4px);
+}
+.corner-settings:hover { background: rgba(38,31,20,.6); }
 .skin-name-tag {
-  position: absolute; left: 12px; bottom: 10px; z-index: 2;
-  font-size: 12px; color: rgba(246,239,220,.75);
+  position: absolute; left: 18px; bottom: max(16px, env(safe-area-inset-bottom)); z-index: 3; /* 부채 장식(z2) 위 */
+  font-size: 12px; letter-spacing: .04em; color: rgba(233,224,200,.6);
+  text-shadow: 0 1px 4px rgba(0,0,0,.7);
+}
+/* 낮은 뷰포트(가로모드 폰·줄인 창) — 하단 정박을 풀고 중앙 압축, 장식 제거 (타이틀 잘림 방지) */
+@media (max-height: 560px) {
+  .home-inner { justify-content: center; padding-bottom: 24px; }
+  .home-title { font-size: 36px; }
+  .home-sub { margin-top: 8px; }
+  .home-btns { margin-top: 14px; gap: 8px; }
+  .home-btns button.big, .home-btns button.big.primary { padding: 8px 16px 9px; }
+  .home-fan, .home-embers { display: none; }
 }
 
 /* ---------- 설정 ---------- */
@@ -960,7 +1071,6 @@ button.skin-card {
   .sheet { width: min(96vw, 400px); padding: 14px 14px 12px; }
   .gs-min { top: 8px; right: 8px; }
   .offer { grid-template-columns: 36px 1fr auto; }
-  .home-title { font-size: 44px; }
 }
 
 /* 낮은 화면(짧은 폰) 추가 압축 */
@@ -1291,14 +1401,16 @@ html { color-scheme: only light; }
 #shake-reveal > b { color: var(--dan-red); font-family: var(--serif); font-size: 20px;
   text-shadow: 0 1px 0 rgba(0,0,0,.8); display: block; margin-bottom: 4px; }
 @keyframes rise { from { opacity: 0; transform: translate(-50%, -40%); } to { opacity: 1; transform: translate(-50%, -50%); } }
-/* 폭탄피 — 손패 대신 내는 패스권 (뒷면풍 + 금박 표기) */
+/* 폭탄피 — 손패 대신 내는 패스권 (뒷면풍 + 금박 표기, 글자 가독 위해 엠블럼은 생략) */
 .card.bomb-pass {
   background-color: #7a1c13;
   background-image:
-    radial-gradient(ellipse 90% 70% at 50% 32%, rgba(255,190,150,0.22), transparent 60%),
-    repeating-linear-gradient(45deg, rgba(0,0,0,0.10) 0 2px, transparent 2px 5px);
-  border: 1px solid #4e1109;
-  box-shadow: inset 0 0 0 3px rgba(255,214,170,0.14), 0 2px 4px rgba(0,0,0,.35);
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='44' height='44' viewBox='0 0 44 44'%3E%3Cg fill='none' stroke='%23d9a53c' stroke-width='1.5' stroke-linecap='round' opacity='.55'%3E%3Cpath d='M0 22 C 8 13 14 13 22 22 C 30 31 36 31 44 22'/%3E%3Cpath d='M22 0 C 13 8 13 14 22 22 C 31 30 31 36 22 44'/%3E%3C/g%3E%3Ccircle cx='22' cy='22' r='1.5' fill='%23d9a53c' opacity='.6'/%3E%3Ccircle cx='0' cy='0' r='1.2' fill='%23d9a53c' opacity='.4'/%3E%3Ccircle cx='44' cy='44' r='1.2' fill='%23d9a53c' opacity='.4'/%3E%3Ccircle cx='0' cy='44' r='1.2' fill='%23d9a53c' opacity='.4'/%3E%3Ccircle cx='44' cy='0' r='1.2' fill='%23d9a53c' opacity='.4'/%3E%3C/svg%3E"),
+    radial-gradient(115% 80% at 28% 18%, #8f2619, transparent 55%),
+    radial-gradient(110% 95% at 78% 84%, #5f130e, transparent 62%);
+  background-size: 12px 12px, 100% 100%, 100% 100%;
+  border: 2px solid #4e1109;
+  box-shadow: inset 0 0 0 1px rgba(217,165,60,0.30), 0 2px 4px rgba(0,0,0,.35);
   display: flex; align-items: center; justify-content: center;
 }
 .card.bomb-pass span {
@@ -1310,10 +1422,19 @@ html { color-scheme: only light; }
 </style>
 </head>
 <body>
+<!-- 도장 날인 필터 — 관인 가장자리를 거칠게 (CSS filter: url(#stamp-rough)에서 참조) -->
+<svg width="0" height="0" style="position:absolute" aria-hidden="true"><filter id="stamp-rough" x="-15%" y="-15%" width="130%" height="130%"><feTurbulence type="fractalNoise" baseFrequency="0.028" numOctaves="3" seed="7" result="n"/><feDisplacementMap in="SourceGraphic" in2="n" scale="4" xChannelSelector="R" yChannelSelector="G"/></filter></svg>
+
 <!-- 홈 화면 — 배경은 해금한 일러스트 걸개에서 무작위 -->
 <div id="home" hidden>
   <div id="home-bg"></div>
-  <button id="btn-home-settings" class="corner-settings">설정</button>
+  <!-- 떠다니는 불씨 — 걸개 위 은은한 생기 (reduced-motion에선 전역 규칙이 정지시킴) -->
+  <div class="home-embers" aria-hidden="true"><i></i><i></i><i></i></div>
+  <!-- 하단 화투 뒷면 부채 — 장식 (Claude Design 시안) -->
+  <div class="home-fan" aria-hidden="true"><i></i><i></i><i></i></div>
+  <button id="btn-home-settings" class="corner-settings" aria-label="설정" title="설정">
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#e9e0c8" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3.1"></circle><path d="M12 2.5v3M12 18.5v3M21.5 12h-3M5.5 12h-3M18.36 5.64l-2.12 2.12M7.76 16.24l-2.12 2.12M18.36 18.36l-2.12-2.12M7.76 7.76 5.64 5.64"></path></svg>
+  </button>
   <div class="home-inner">
     <h1 class="home-title">쓰리고<span class="bang">!</span></h1>
     <p class="home-sub">저승 노름판 — 화투 로그라이크</p>
@@ -1632,7 +1753,7 @@ html { color-scheme: only light; }
     <div class="btns"><button id="codex-close" class="primary">닫기</button></div>
   </div>
 </div>
-<script>window.__BUILD = "2026-07-18 15:08 UTC";</script>
+<script>window.__BUILD = "2026-07-19 09:16 UTC";</script>
 <script type="module">
 // ===== engine/cards.js =====
 // ============================================================
