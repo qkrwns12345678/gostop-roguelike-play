@@ -1957,7 +1957,7 @@ html { color-scheme: only light; }
     <div class="btns"><button id="codex-close" class="primary">닫기</button></div>
   </div>
 </div>
-<script>window.__BUILD = "2026-07-19 13:47 UTC";</script>
+<script>window.__BUILD = "2026-07-19 14:45 UTC";</script>
 <script type="module">
 // ===== engine/cards.js =====
 // ============================================================
@@ -3828,6 +3828,48 @@ function createRun({ seed, opts = {}, legacyCharmId = null } = {}) {
     return { outcome: 'take', taken, savedBy, coins: { P: S.coins, O: S.dealerCoins }, stake0, winner, breakdown };
   }
 
+  /**
+   * 정산 예측 (상태 불변) — 지금 총점 `total`로 `winner`가 스톱/정산하면 실제로 몇 냥이 오가고
+   * 관문이 깨지는지 미리 계산한다. resolveMatch의 순서(첫뻑 즉시 지급 → 감투/개평 → 보유량 상한)를
+   * 그대로 흉내 낸다. UI의 승리 예고·고스톱 문구가 실제 결과와 어긋나지 않게 하는 용도.
+   *  - 딜러가 첫뻑을 만들면 정산 전에 딜러 판돈이 +2 늘어, 순수 정산점만으로는 관문이 안 깨진다.
+   *    이 예측이 그 +2를 반영하지 못하면 "판돈 다 턴다"가 거짓 예고가 된다 (이 함수가 그걸 막는다).
+   * @param {{ total:number, winner:'P'|'O', events?:Array<{kind:string,who:'P'|'O'}> }} p
+   * @returns {{ taken:number, clears:boolean, dies:boolean, dealerCoinsAfter:number, myCoinsAfter:number }}
+   */
+  function projectResolve({ total, winner, events = [] }) {
+    let dc = S.dealerCoins;
+    let pc = S.coins;
+    // 1) 첫뻑 즉시 지급 — 정산과 별개, 승패·나가리 무관 (만든 쪽이 상대 엽전을 바로 뜯는다)
+    const fp = events.find((e) => e.kind === '첫뻑');
+    if (fp && R.ppeokBonusCoins > 0) {
+      const got = Math.min(R.ppeokBonusCoins, fp.who === 'P' ? dc : pc);
+      if (fp.who === 'P') { dc -= got; pc += got; }
+      else { pc -= got; dc += got; }
+    }
+    // 나가리(승자 없음) — resolveMatch는 첫뻑만 반영하고 정산 이동은 없다 (UI는 안 부르지만 방어)
+    if (winner !== 'P' && winner !== 'O') {
+      return { taken: 0, clears: dc <= 0, dies: pc <= 0, dealerCoinsAfter: Math.max(0, dc), myCoinsAfter: Math.max(0, pc) };
+    }
+    // 2) 정산 이동 — 감투/개평은 내가 질 때만 (resolveMatch 232-253과 동일 분기)
+    let take = total;
+    if (winner === 'O' && !S.gamtuUsed && S.charms.some((c) => c.runDefend)) {
+      take = 0;
+    } else if (winner === 'O' && losePayRatio() < 1 && take > 0) {
+      take = Math.floor(take * losePayRatio());
+    }
+    const taken = winner === 'P' ? Math.min(take, dc) : Math.min(take, pc);
+    const dealerCoinsAfter = winner === 'P' ? dc - taken : dc + taken;
+    const myCoinsAfter = winner === 'P' ? pc + taken : pc - taken;
+    return {
+      taken,
+      clears: dealerCoinsAfter <= 0, // 관문 격파
+      dies: myCoinsAfter <= 0,       // 내 판돈 소진 (부적 onMatchEnd 보정은 무시 — 근사)
+      dealerCoinsAfter: Math.max(0, dealerCoinsAfter),
+      myCoinsAfter: Math.max(0, myCoinsAfter),
+    };
+  }
+
   // ---------- 저승 객주 ----------
 
   function rollOffers(rerolls) {
@@ -3986,6 +4028,7 @@ function createRun({ seed, opts = {}, legacyCharmId = null } = {}) {
   return {
     startMatch,
     resolveMatch,
+    projectResolve,
     dealerPolicy,
     buy,
     grant,
@@ -6150,8 +6193,8 @@ function render() {
   }
   fxCharmProcs(pv); // 부적 발동 — 칩 반짝 + 효과 문구
 
-  // "다음에 스톱하면 승리" — 고 선언 후 이번 판 정산이 딜러 판돈을 처음 덮은 순간 한 번
-  if (!winBannerShown && v.go.P >= 1 && pv.total >= rv.dealerCoins) {
+  // "다음에 스톱하면 승리" — 고 선언 후 이번 판 정산이 (첫뻑 반영해도) 딜러 판돈을 처음 덮은 순간 한 번
+  if (!winBannerShown && v.go.P >= 1 && run.projectResolve({ total: pv.total, winner: 'P', events: v.events }).clears) {
     winBannerShown = true;
     const banner = $('win-banner');
     banner.hidden = false;
@@ -6329,10 +6372,12 @@ function render() {
   if (v.phase === 'goStop') {
     receiptLines($('gostop-lines'), v.goStop.settle);
     const stopTotal = v.goStop.settle.total;
-    const winNow = stopTotal >= rv.dealerCoins;
+    // 실제 정산 순서(첫뻑 +2 → 상한)까지 반영해 예고 — 딜러 첫뻑이면 "다 턴다"가 거짓이 되지 않게
+    const pr = run.projectResolve({ total: stopTotal, winner: 'P', events: v.events });
+    const winNow = pr.clears;
     $('gostop-note').textContent = winNow
-      ? `지금 스톱하면 ${stopTotal}점 — 딜러 판돈 ${rv.dealerCoins}냥을 다 턴다. 관문 승리!`
-      : `지금 스톱하면 딜러 판돈에서 ${Math.min(stopTotal, rv.dealerCoins)}냥을 뜯는다.`;
+      ? `지금 스톱하면 ${stopTotal}점 — 딜러 판돈을 다 턴다. 관문 승리!`
+      : `지금 스톱하면 딜러 판돈에서 ${pr.taken}냥을 뜯는다.`;
     $('btn-stop').textContent = winNow ? '스톱 — 관문 격파!' : '스톱';
     const mm = match;
     setTimeout(() => {
