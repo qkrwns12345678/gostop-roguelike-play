@@ -1955,7 +1955,7 @@ html { color-scheme: only light; }
     <div class="btns"><button id="codex-close" class="primary">닫기</button></div>
   </div>
 </div>
-<script>window.__BUILD = "2026-07-20 14:31 UTC";</script>
+<script>window.__BUILD = "2026-07-20 15:13 UTC";</script>
 <script type="module">
 // ===== engine/cards.js =====
 // ============================================================
@@ -2479,8 +2479,10 @@ function deal(rng) {
  * @param {object} [p.dealerConfig]  딜러 규칙 (기본: config와 동일 — 로그라이크에선 문턱 7의 클래식)
  * @param {{P:Array,O:Array}} [p.charms] 부적 — onSettle(정산)·onEvent(진행)·onMatchStart(배분 직후) 훅
  * @param {Array} [p.mutators] 딜러 기믹 — { name, onDeal(state, rng)?, dealerChoose(hand, floor)? } (engine/dealers.js)
+ * @param {'P'|'O'} [p.startingPlayer] 선 — 먼저 패를 낼 쪽 (기본 'P'; 로그라이크는 직전 판 승자를 넘긴다)
  */
-function createMatch({ seed, config = DEFAULT_CONFIG, dealerConfig = null, charms = { P: [], O: [] }, mutators = [] } = {}) {
+function createMatch({ seed, config = DEFAULT_CONFIG, dealerConfig = null, charms = { P: [], O: [] }, mutators = [], startingPlayer = 'P' } = {}) {
+  if (startingPlayer !== 'P' && startingPlayer !== 'O') throw new Error(`startingPlayer는 'P'|'O'만: ${startingPlayer}`);
   dealerConfig ??= config;
   const rng = mulberry32(seed);
   const events = [];
@@ -2491,7 +2493,7 @@ function createMatch({ seed, config = DEFAULT_CONFIG, dealerConfig = null, charm
 
   const M = {
     phase: 'play',
-    turn: 'P', // 선
+    turn: startingPlayer, // 선 — 먼저 패를 낼 쪽
     turns: 0,
     result: null,
     pendingChoice: null, // { source:'play'|'flip', card, pile, options }
@@ -3624,6 +3626,7 @@ function createRun({ seed, opts = {}, legacyCharmId = null } = {}) {
     charms: [],               // 보유 부적 (CHARMS 원본 참조)
     carry: { P: [], O: [] },  // 나가리 이월 배수
     gamtuUsed: false,         // 도깨비 감투 — 런당 1회, 뜯길 위기 무효
+    nextStarter: 'P',         // 다음 판 선(先) — 첫 판은 플레이어, 이후 직전 판 승자
     phase: 'gate',
     shop: null,               // { offers, rerolls }
     log: [],                  // 런 사건 기록 (UI 표시용)
@@ -3674,6 +3677,7 @@ function createRun({ seed, opts = {}, legacyCharmId = null } = {}) {
       dealerConfig: dealerConfig(),
       charms: { P: S.charms, O: dealerCharms() },
       mutators: DEALERS[S.gate].mutators,
+      startingPlayer: S.nextStarter, // 이긴 쪽이 먼저 낸다 (첫 판은 'P')
     });
   }
 
@@ -3735,6 +3739,9 @@ function createRun({ seed, opts = {}, legacyCharmId = null } = {}) {
     const events = match.events;
     const stake0 = TARGETS[S.gate];
     const breakdown = [];
+
+    // 이긴 쪽이 다음 판 선(先) — 나가리(승자 없음)면 직전 선을 그대로 유지
+    if (result.winner) S.nextStarter = result.winner;
 
     // ── 첫뻑 즉시 지급 — 판 정산과 별개로 만든 쪽이 상대 엽전을 뜯는다 (승패·나가리 무관)
     const firstPpeok = events.find((e) => e.kind === '첫뻑');
@@ -3957,6 +3964,7 @@ function createRun({ seed, opts = {}, legacyCharmId = null } = {}) {
       charmIds: S.charms.map((c) => c.id),
       carry: { P: S.carry.P.map((m) => ({ ...m })), O: S.carry.O.map((m) => ({ ...m })) },
       gamtuUsed: S.gamtuUsed,
+      nextStarter: S.nextStarter,
       phase: S.phase,
       shop: S.shop ? { rerolls: S.shop.rerolls, offerIds: S.shop.offers.map((o) => o.charm.id) } : null,
       log: [...S.log],
@@ -3973,6 +3981,7 @@ function createRun({ seed, opts = {}, legacyCharmId = null } = {}) {
     S.charms = snap.charmIds.map((id) => CHARMS.find((c) => c.id === id)).filter(Boolean);
     S.carry = { P: [...(snap.carry?.P ?? [])], O: [...(snap.carry?.O ?? [])] };
     S.gamtuUsed = snap.gamtuUsed ?? false;
+    S.nextStarter = snap.nextStarter ?? 'P';
     S.phase = snap.phase;
     S.shop = snap.shop
       ? {
@@ -6027,6 +6036,7 @@ function fxCharmProcs(pv) {
 
 // ---------- 딜링 연출 — 더미에서 바닥·딜러·내 손으로 나눠준다 ----------
 let dealGen = 0; // 세대 토큰 — 딜링 중 재시작/홈 이동 시 이전 연출의 잔여 타이머 무효화
+let dealEndsAt = 0; // 딜링 연출이 끝나는 시각 — 딜러가 선일 때 이 뒤에 첫 수를 두게 (배분 중 자동 플레이 방지)
 function dealIntro() {
   if (REDUCED_MOTION) return;
   const stockRect = $('stock').querySelector('.card')?.getBoundingClientRect();
@@ -6038,6 +6048,7 @@ function dealIntro() {
   ];
   if (els.length === 0) return;
   const gen = ++dealGen;
+  dealEndsAt = performance.now() + els.length * 60 + 320; // STEP(60) × 장수 + 마무리
   $('app').classList.add('dealing'); // 나눠주는 동안 입력 잠금
   const STEP = 60; // 한 장씩 또박또박 (v3: 연출 속도 완화)
   for (const el of els) el.classList.add('deal-hide');
@@ -6444,10 +6455,12 @@ function render() {
   }
   if (v.phase === 'play' && v.turn === 'O') {
     clearTimeout(dealerTimer);
+    // 딜러가 선이면 첫 수는 배분 연출이 끝난 뒤에 (딜링 중 자동 플레이로 카드가 겹쳐 날지 않게)
+    const dealLeft = Math.max(0, dealEndsAt - performance.now());
     dealerTimer = setTimeout(() => {
       match.autoTurn(run.dealerPolicy()); // 딜러 성격(stopAt/maxGo) + 은행 상황을 아는 AI
       render();
-    }, Math.max(700, animWait + 350));
+    }, Math.max(700, animWait + 350, dealLeft > 0 ? dealLeft + 300 : 0));
   }
 }
 
@@ -6476,6 +6489,9 @@ function beginMatch(m) {
   $('shop').hidden = true;
   $('runend').hidden = true;
   $('win-banner').hidden = true;
+  // 배분 연출 예상 종료 시각을 먼저 잡아둔다 — render()가 딜러 선(先)의 첫 수를 이 뒤로 미루게
+  // (dealIntro가 실제 장수로 정밀 보정한다). 모션 감축이면 연출이 없으니 0.
+  dealEndsAt = REDUCED_MOTION ? 0 : performance.now() + 2100;
   updateHud();
   render();
   if (!match.isOver()) dealIntro(); // 패 돌리는 연출 — 끝나야 입력이 풀린다
